@@ -48,7 +48,6 @@ import org.eclipse.che.api.workspace.shared.dto.UsersWorkspaceDto;
 import org.eclipse.che.api.workspace.shared.dto.WorkspaceConfigDto;
 import org.eclipse.che.commons.env.EnvironmentContext;
 
-import javax.annotation.security.RolesAllowed;
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.ws.rs.Consumes;
@@ -128,7 +127,6 @@ public class WorkspaceService extends Service {
     @Path("/config")
     @Consumes(APPLICATION_JSON)
     @Produces(APPLICATION_JSON)
-    @RolesAllowed("user")
     @GenerateLink(rel = LINK_REL_CREATE_WORKSPACE)
     @ApiOperation(value = "Create a new workspace based on the configuration",
                   notes = "This operation can be performed only by authorized user," +
@@ -158,7 +156,6 @@ public class WorkspaceService extends Service {
     @GET
     @Path("/{id}")
     @Produces(APPLICATION_JSON)
-    @RolesAllowed("user")
     @ApiOperation(value = "Get the workspace by the id",
                   notes = "This operation can be performed only by the workspace owner")
     @ApiResponses({@ApiResponse(code = 200, message = "The response contains requested workspace entity"),
@@ -170,13 +167,11 @@ public class WorkspaceService extends Service {
                                                                                                   ForbiddenException,
                                                                                                   BadRequestException {
         final UsersWorkspaceImpl workspace = workspaceManager.getWorkspace(id);
-        ensureUserIsWorkspaceOwner(workspace);
         return injectLinks(asDto(workspace));
     }
 
     @GET
     @Path("/name/{name}")
-    @RolesAllowed("user")
     @Produces(APPLICATION_JSON)
     @ApiOperation(value = "Get the workspace by the name from the workspaces owned by the current user",
                   notes = "This operation can be performed only by the authorized user")
@@ -193,7 +188,6 @@ public class WorkspaceService extends Service {
 
     @GET
     @Produces(APPLICATION_JSON)
-    @RolesAllowed("user")
     @GenerateLink(rel = LINK_REL_GET_WORKSPACES)
     @ApiOperation(value = "Get the workspaces owned by the current user",
                   notes = "This operation can be performed only by authorized user",
@@ -220,7 +214,6 @@ public class WorkspaceService extends Service {
     @Path("/{id}/config")
     @Consumes(APPLICATION_JSON)
     @Produces(APPLICATION_JSON)
-    @RolesAllowed("user")
     @ApiOperation(value = "Update the workspace by replacing all the existing data with update",
                   notes = "This operation can be performed only by the workspace owner")
     @ApiResponses({@ApiResponse(code = 200, message = "The workspace successfully updated"),
@@ -239,13 +232,11 @@ public class WorkspaceService extends Service {
                                                                       NotFoundException,
                                                                       ConflictException {
         requiredNotNull(update, "Workspace configuration");
-        ensureUserIsWorkspaceOwner(id);
         return injectLinks(asDto(workspaceManager.updateWorkspace(id, update)));
     }
 
     @DELETE
     @Path("/{id}/config")
-    @RolesAllowed("user")
     @ApiOperation(value = "Removes the workspace",
                   notes = "This operation can be performed only by the workspace owner")
     @ApiResponses({@ApiResponse(code = 204, message = "The workspace successfully removed"),
@@ -258,14 +249,12 @@ public class WorkspaceService extends Service {
                                                                                         NotFoundException,
                                                                                         ConflictException,
                                                                                         ForbiddenException {
-        ensureUserIsWorkspaceOwner(id);
         workspaceManager.removeWorkspace(id);
     }
 
     @GET
     @Path("/{id}/runtime")
     @Produces(APPLICATION_JSON)
-    @RolesAllowed("user")
     @ApiOperation(value = "Get the runtime workspace by the id",
                   notes = "This operation can be performed only by the authorized user")
     @ApiResponses({@ApiResponse(code = 200, message = "The response contains requested runtime workspace entity"),
@@ -279,14 +268,12 @@ public class WorkspaceService extends Service {
                                                                          NotFoundException,
                                                                          ForbiddenException {
         final RuntimeWorkspaceImpl runtimeWorkspace = workspaceManager.getRuntimeWorkspace(id);
-        ensureUserIsWorkspaceOwner(runtimeWorkspace);
         return injectLinks(asDto(runtimeWorkspace));
     }
 
     @GET
     @Path("/runtime")
     @Produces(APPLICATION_JSON)
-    @RolesAllowed("user")
     @ApiOperation(value = "Get the runtime workspaces owned by current user",
                   notes = "This operation can be performed only by authorized user",
                   response = RuntimeWorkspaceDto.class,
@@ -310,7 +297,6 @@ public class WorkspaceService extends Service {
     @POST
     @Path("/{id}/runtime")
     @Produces(APPLICATION_JSON)
-    @RolesAllowed("user")
     @ApiOperation(value = "Start the workspace by the id",
                   notes = "This operation can be performed only by the workspace owner." +
                           "The workspace starts asynchronously")
@@ -333,8 +319,6 @@ public class WorkspaceService extends Service {
                                                                 NotFoundException,
                                                                 ForbiddenException,
                                                                 ConflictException {
-        ensureUserIsWorkspaceOwner(workspaceId);
-
         final Map<String, String> params = Maps.newHashMapWithExpectedSize(2);
         params.put("accountId", accountId);
         params.put("workspaceId", workspaceId);
@@ -346,7 +330,6 @@ public class WorkspaceService extends Service {
     @POST
     @Path("/name/{name}/runtime")
     @Produces(APPLICATION_JSON)
-    @RolesAllowed("user")
     @ApiOperation(value = "Start workspace by name",
                   notes = "This operation can be performed only by the authorized user." +
                           "The workspace starts asynchronously")
@@ -371,7 +354,6 @@ public class WorkspaceService extends Service {
                                                                   ForbiddenException,
                                                                   ConflictException {
         final UsersWorkspace workspace = workspaceManager.getWorkspace(name, getCurrentUserId());
-        ensureUserIsWorkspaceOwner(workspace);
 
         final Map<String, String> params = Maps.newHashMapWithExpectedSize(2);
         params.put("accountId", accountId);
@@ -385,7 +367,6 @@ public class WorkspaceService extends Service {
     @Path("/runtime")
     @Consumes(APPLICATION_JSON)
     @Produces(APPLICATION_JSON)
-    @RolesAllowed({"user", "temp-user"})
     @ApiOperation(value = "Start the temporary workspace from the given configuration",
                   notes = "This operation can be performed only by the authorized user or temp user." +
                           "The workspace starts synchronously")
@@ -414,7 +395,6 @@ public class WorkspaceService extends Service {
     @POST
     @Path("/{id}/runtime/snapshot")
     @Produces(APPLICATION_JSON)
-    @RolesAllowed("user")
     @ApiOperation(value = "Recover the workspace by the id from the snapshot",
                   notes = "This operation can be performed only by the workspace owner." +
                           "The workspace recovers asynchronously")
@@ -438,8 +418,6 @@ public class WorkspaceService extends Service {
                                                                        NotFoundException,
                                                                        ServerException,
                                                                        ConflictException {
-        ensureUserIsWorkspaceOwner(workspaceId);
-
         final Map<String, String> params = Maps.newHashMapWithExpectedSize(2);
         params.put("accountId", accountId);
         params.put("workspaceId", workspaceId);
@@ -450,7 +428,6 @@ public class WorkspaceService extends Service {
 
     @DELETE
     @Path("/{id}/runtime")
-    @RolesAllowed("user")
     @ApiOperation(value = "Stop the workspace",
                   notes = "This operation can be performed only by the workspace owner." +
                           "The workspace stops asynchronously")
@@ -462,13 +439,11 @@ public class WorkspaceService extends Service {
                                                                                       ForbiddenException,
                                                                                       NotFoundException,
                                                                                       ServerException {
-        ensureUserIsWorkspaceOwner(id);
         workspaceManager.stopWorkspace(id);
     }
 
     @POST
     @Path("/{id}/snapshot")
-    @RolesAllowed("user")
     @ApiOperation(value = "Create a snapshot from the workspace",
                   notes = "This operation can be performed only by the workspace owner.")
     @ApiResponses({@ApiResponse(code = 200, message = "The snapshot successfully created"),
@@ -481,15 +456,12 @@ public class WorkspaceService extends Service {
                                                                                                          ForbiddenException,
                                                                                                          NotFoundException,
                                                                                                          ServerException {
-        ensureUserIsWorkspaceOwner(workspaceId);
-
         workspaceManager.createSnapshot(workspaceId);
     }
 
     @GET
     @Path("/{id}/snapshot")
     @Produces(APPLICATION_JSON)
-    @RolesAllowed("user")
     @ApiOperation(value = "Get the snapshot by the id",
                   notes = "This operation can be performed only by the workspace owner",
                   response = SnapshotDto.class,
@@ -503,8 +475,6 @@ public class WorkspaceService extends Service {
                                                                                                                           BadRequestException,
                                                                                                                           NotFoundException,
                                                                                                                           ForbiddenException {
-        ensureUserIsWorkspaceOwner(workspaceId);
-
         return workspaceManager.getSnapshot(workspaceId)
                                .stream()
                                .map(DtoConverter::asDto)
@@ -516,7 +486,6 @@ public class WorkspaceService extends Service {
     @Path("/{id}/command")
     @Consumes(APPLICATION_JSON)
     @Produces(APPLICATION_JSON)
-    @RolesAllowed("user")
     @ApiOperation(value = "Update the workspace by adding a new command to it",
                   notes = "This operation can be performed only by the workspace owner")
     @ApiResponses({@ApiResponse(code = 200, message = "The workspace successfully updated"),
@@ -536,7 +505,6 @@ public class WorkspaceService extends Service {
                                                                       ForbiddenException {
         requiredNotNull(newCommand, "Command");
         final UsersWorkspaceImpl workspace = workspaceManager.getWorkspace(id);
-        ensureUserIsWorkspaceOwner(workspace);
         workspace.getConfig().getCommands().add(new CommandImpl(newCommand));
         return injectLinks(asDto(workspaceManager.updateWorkspace(workspace.getId(), workspace.getConfig())));
     }
@@ -545,7 +513,6 @@ public class WorkspaceService extends Service {
     @Path("/{id}/command")
     @Consumes(APPLICATION_JSON)
     @Produces(APPLICATION_JSON)
-    @RolesAllowed("user")
     @ApiOperation(value = "Update the workspace command by replacing the command with a new one",
                   notes = "This operation can be performed only by the workspace owner")
     @ApiResponses({@ApiResponse(code = 200, message = "The command successfully updated"),
@@ -564,7 +531,6 @@ public class WorkspaceService extends Service {
                                                                      ForbiddenException {
         requiredNotNull(update, "Command update");
         final UsersWorkspaceImpl workspace = workspaceManager.getWorkspace(id);
-        ensureUserIsWorkspaceOwner(workspace);
         if (!workspace.getConfig().getCommands().removeIf(cmd -> cmd.getName().equals(update.getName()))) {
             throw new NotFoundException("Workspace " + id + " doesn't contain command " + update.getName());
         }
@@ -574,7 +540,6 @@ public class WorkspaceService extends Service {
 
     @DELETE
     @Path("/{id}/command/{name}")
-    @RolesAllowed("user")
     @ApiOperation(value = "Remove the command from the workspace",
                   notes = "This operation can be performed only by the workspace owner")
     @ApiResponses({@ApiResponse(code = 204, message = "The command successfully removed"),
@@ -592,7 +557,6 @@ public class WorkspaceService extends Service {
                                                          ConflictException,
                                                          ForbiddenException {
         final UsersWorkspaceImpl workspace = workspaceManager.getWorkspace(id);
-        ensureUserIsWorkspaceOwner(workspace);
         if (workspace.getConfig().getCommands().removeIf(command -> command.getName().equals(commandName))) {
             workspaceManager.updateWorkspace(id, workspace.getConfig());
         }
@@ -602,7 +566,6 @@ public class WorkspaceService extends Service {
     @Path("/{id}/environment")
     @Consumes(APPLICATION_JSON)
     @Produces(APPLICATION_JSON)
-    @RolesAllowed("user")
     @ApiOperation(value = "Add a new environment to the workspace",
                   notes = "This operation can be performed only by the workspace owner")
     @ApiResponses({@ApiResponse(code = 200, message = "The workspace successfully updated"),
@@ -622,7 +585,6 @@ public class WorkspaceService extends Service {
                                                                                   ForbiddenException {
         requiredNotNull(newEnvironment, "New environment");
         final UsersWorkspaceImpl workspace = workspaceManager.getWorkspace(id);
-        ensureUserIsWorkspaceOwner(workspace);
         if (workspace.getConfig()
                      .getEnvironments()
                      .stream()
@@ -637,7 +599,6 @@ public class WorkspaceService extends Service {
     @Path("/{id}/environment")
     @Consumes(APPLICATION_JSON)
     @Produces(APPLICATION_JSON)
-    @RolesAllowed("user")
     @ApiOperation(value = "Update the workspace environment by replacing it with a new one",
                   notes = "This operation can be performed only by the workspace owner")
     @ApiResponses({@ApiResponse(code = 200, message = "The environment successfully updated"),
@@ -656,7 +617,6 @@ public class WorkspaceService extends Service {
                                                                              ForbiddenException {
         requiredNotNull(update, "Environment description");
         final UsersWorkspaceImpl workspace = workspaceManager.getWorkspace(id);
-        ensureUserIsWorkspaceOwner(workspace);
         if (!workspace.getConfig()
                       .getEnvironments()
                       .stream()
@@ -669,7 +629,6 @@ public class WorkspaceService extends Service {
 
     @DELETE
     @Path("/{id}/environment/{name}")
-    @RolesAllowed("user")
     @ApiOperation(value = "Remove the environment from the workspace",
                   notes = "This operation can be performed only by the workspace owner")
     @ApiResponses({@ApiResponse(code = 204, message = "The environment successfully removed"),
@@ -687,7 +646,6 @@ public class WorkspaceService extends Service {
                                                          ConflictException,
                                                          ForbiddenException {
         final UsersWorkspaceImpl workspace = workspaceManager.getWorkspace(id);
-        ensureUserIsWorkspaceOwner(workspace);
         Iterator<EnvironmentImpl> it = workspace.getConfig().getEnvironments().iterator();
         while (it.hasNext()) {
             if (it.next().getName().equals(envName)) {
@@ -701,7 +659,6 @@ public class WorkspaceService extends Service {
     @Path("/{id}/project")
     @Consumes(APPLICATION_JSON)
     @Produces(APPLICATION_JSON)
-    @RolesAllowed("user")
     @ApiOperation(value = "Adds a new project to the workspace",
                   notes = "This operation can be performed only by the workspace owner")
     @ApiResponses({@ApiResponse(code = 200, message = "The project successfully added to the workspace"),
@@ -721,7 +678,6 @@ public class WorkspaceService extends Service {
                                                                             ForbiddenException {
         requiredNotNull(newProject, "New project config");
         final UsersWorkspaceImpl workspace = workspaceManager.getWorkspace(id);
-        ensureUserIsWorkspaceOwner(workspace);
         workspace.getConfig().getProjects().add(new ProjectConfigImpl(newProject));
         return injectLinks(asDto(workspaceManager.updateWorkspace(id, workspace.getConfig())));
     }
@@ -730,7 +686,6 @@ public class WorkspaceService extends Service {
     @Path("/{id}/project")
     @Consumes(APPLICATION_JSON)
     @Produces(APPLICATION_JSON)
-    @RolesAllowed("user")
     @ApiOperation(value = "Update the workspace project by replacing it with a new one",
                   notes = "This operation can be performed only by the workspace owner")
     @ApiResponses({@ApiResponse(code = 200, message = "The project successfully updated"),
@@ -749,7 +704,6 @@ public class WorkspaceService extends Service {
                                                                            ForbiddenException {
         requiredNotNull(update, "Project config");
         final UsersWorkspaceImpl workspace = workspaceManager.getWorkspace(id);
-        ensureUserIsWorkspaceOwner(workspace);
         if (!workspace.getConfig().getProjects().removeIf(project -> project.getName().equals(update.getName()))) {
             throw new NotFoundException("Workspace " + id + " doesn't contain project " + update.getName());
         }
@@ -759,7 +713,6 @@ public class WorkspaceService extends Service {
 
     @DELETE
     @Path("/{id}/project/{name}")
-    @RolesAllowed("user")
     @ApiOperation(value = "Remove the project from the workspace",
                   notes = "This operation can be performed only by the workspace owner")
     @ApiResponses({@ApiResponse(code = 204, message = "The project successfully removed"),
@@ -777,7 +730,6 @@ public class WorkspaceService extends Service {
                                                          ConflictException,
                                                          ForbiddenException {
         final UsersWorkspaceImpl workspace = workspaceManager.getWorkspace(id);
-        ensureUserIsWorkspaceOwner(workspace);
         if (workspace.getConfig().getProjects().removeIf(project -> project.getName().equals(projectName))) {
             workspaceManager.updateWorkspace(id, workspace.getConfig());
         }
@@ -787,7 +739,6 @@ public class WorkspaceService extends Service {
     @Path("/{id}/machine")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    @RolesAllowed("user")
     @ApiOperation(value = "Create a new machine based on the configuration",
                   notes = "This operation can be performed only by authorized user")
     @ApiResponses({@ApiResponse(code = 201, message = "The machine successfully created"),
@@ -813,41 +764,12 @@ public class WorkspaceService extends Service {
 
         RuntimeWorkspaceImpl runtimeWorkspace = workspaceManager.getRuntimeWorkspace(workspaceId);
 
-        ensureUserIsWorkspaceOwner(runtimeWorkspace);
-
         final MachineImpl machine = machineManager.createMachineAsync(machineConfig, workspaceId, runtimeWorkspace.getActiveEnv());
 
         return Response.status(201)
                        .entity(MachineService.injectLinks(org.eclipse.che.api.machine.server.DtoConverter.asDto(machine),
                                                           getServiceContext()))
                        .build();
-    }
-
-    /**
-     * Checks that principal from current {@link EnvironmentContext#getUser() context} is in 'workspace/owner' role
-     * if he is not throws {@link ForbiddenException}.
-     *
-     * <p>{@link SecurityContext#isUserInRole(String)} is not the case,
-     * as it works only for 'user', 'tmp-user', 'system/admin', 'system/manager.
-     */
-    private void ensureUserIsWorkspaceOwner(String workspaceId)
-            throws ServerException, BadRequestException, ForbiddenException, NotFoundException {
-        final UsersWorkspaceImpl workspace = workspaceManager.getWorkspace(workspaceId);
-        ensureUserIsWorkspaceOwner(workspace);
-    }
-
-    /**
-     * Checks that principal from current {@link EnvironmentContext#getUser() context} is in 'workspace/owner' role
-     * if he is not throws {@link ForbiddenException}.
-     *
-     * <p>{@link SecurityContext#isUserInRole(String)} is not the case,
-     * as it works only for 'user', 'tmp-user', 'system/admin', 'system/manager.
-     */
-    private void ensureUserIsWorkspaceOwner(UsersWorkspace usersWorkspace) throws ServerException, BadRequestException, ForbiddenException {
-        final String userId = getCurrentUserId();
-        if (!usersWorkspace.getOwner().equals(userId)) {
-            throw new ForbiddenException("User '" + userId + "' doesn't have access to '" + usersWorkspace.getId() + "' workspace");
-        }
     }
 
     @SuppressWarnings("unchecked")
