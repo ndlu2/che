@@ -27,6 +27,8 @@ import org.eclipse.che.api.core.notification.EventService;
 import org.eclipse.che.api.machine.server.MachineManager;
 import org.eclipse.che.api.machine.server.impl.SnapshotImpl;
 import org.eclipse.che.api.machine.server.model.impl.MachineImpl;
+import org.eclipse.che.api.workspace.server.event.WorkspaceCreatedEvent;
+import org.eclipse.che.api.workspace.server.event.WorkspaceRemovedEvent;
 import org.eclipse.che.api.workspace.server.model.impl.RuntimeWorkspaceImpl;
 import org.eclipse.che.api.workspace.server.model.impl.UsersWorkspaceImpl;
 import org.eclipse.che.api.workspace.server.spi.WorkspaceDao;
@@ -136,6 +138,7 @@ public class WorkspaceManager {
         workspaceDao.create(newWorkspace);
         hooks.afterCreate(newWorkspace, accountId);
 
+        eventService.publish(new WorkspaceCreatedEvent(newWorkspace, accountId));
         // TODO move 'analytics' logs to the appropriate interceptors
         LOG.info("EVENT#workspace-created# WS#{}# WS-ID#{}# USER#{}#",
                  newWorkspace.getConfig().getName(),
@@ -270,6 +273,7 @@ public class WorkspaceManager {
         }
         workspaceDao.remove(workspaceId);
         hooks.afterRemove(workspaceId);
+        eventService.publish(new WorkspaceRemovedEvent(workspaceId));
         LOG.info("EVENT#workspace-remove# WS-ID#{}#", workspaceId);
     }
 
