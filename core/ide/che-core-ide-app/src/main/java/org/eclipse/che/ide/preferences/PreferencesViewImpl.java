@@ -67,6 +67,7 @@ public class PreferencesViewImpl extends Window implements PreferencesView {
     private CoreLocalizationConstant locale;
     private ActionDelegate           delegate;
     private CategoriesList           list;
+    private PreferencePagePresenter  selectedPage;
 
     private final Category.CategoryEventDelegate<PreferencePagePresenter> preferencesPageDelegate =
             new Category.CategoryEventDelegate<PreferencePagePresenter>() {
@@ -160,6 +161,10 @@ public class PreferencesViewImpl extends Window implements PreferencesView {
     /** {@inheritDoc} */
     @Override
     public void show() {
+        if (selectedPage != null) {
+            delegate.onPreferenceSelected(selectedPage);
+        }
+
         super.show();
     }
 

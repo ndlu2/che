@@ -32,4 +32,6 @@ public interface ErrorWarningsView extends IsWidget {
      *         widget which will be added
      */
     void addProperty(@NotNull PropertyWidget propertyWidget);
+
+    void cleanUp();
 }

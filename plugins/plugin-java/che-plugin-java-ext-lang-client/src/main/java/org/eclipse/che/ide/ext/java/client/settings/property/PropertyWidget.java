@@ -11,6 +11,7 @@
 package org.eclipse.che.ide.ext.java.client.settings.property;
 
 import org.eclipse.che.ide.api.mvp.View;
+import org.eclipse.che.ide.ext.java.client.settings.compiler.ErrorWarningsOptions;
 
 import javax.validation.constraints.NotNull;
 
@@ -29,15 +30,14 @@ public interface PropertyWidget extends View<PropertyWidget.ActionDelegate> {
      */
     void selectPropertyValue(@NotNull String value);
 
-    public interface ActionDelegate {
+    String getSelectedValue();
+
+    ErrorWarningsOptions getOptionId();
+
+    interface ActionDelegate {
         /**
          * Performs some action when user change value of property.
-         *
-         * @param propertyId
-         *         property id which was changed
-         * @param value
-         *         value which was set to property
          */
-        void onPropertyChanged(@NotNull String propertyId, @NotNull String value);
+        void onPropertyChanged();
     }
 }
