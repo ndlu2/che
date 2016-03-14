@@ -11,25 +11,28 @@
 'use strict';
 
 /**
- * @ngdoc directive
- * @name help.directive:HelpWidget
- * @description This class is handling the directive of the help
+ * @ngdoc controller
+ * @name projects.create-project.github.oauth-dialog.controller:NoGithubOauthDialogController
+ * @description This class is handling the controller for the no Github oAuth dialog
  * @author Florent Benoit
  */
-export class HelpWidget {
+export class NoGithubOauthDialogController {
 
   /**
    * Default constructor that is using resource
    * @ngInject for Dependency injection
    */
-  constructor() {
-    this.restrict = 'E';
-    this.templateUrl = 'app/navbar/help/help.html';
-    this.replace = false;
-
-    this.controller = 'HelpCtrl';
-    this.controllerAs = 'helpCtrl';
-    this.bindToController = true;
+  constructor($mdDialog, $rootScope) {
+    this.$mdDialog = $mdDialog;
+    
+    this.name = $rootScope.branding.name;
+    this.link = $rootScope.branding.oauthDocs;
   }
 
+  /**
+   * It will hide the dialog box.
+   */
+  hide() {
+    this.$mdDialog.hide();
+  }
 }
