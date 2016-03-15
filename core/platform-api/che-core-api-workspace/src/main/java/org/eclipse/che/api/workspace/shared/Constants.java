@@ -10,8 +10,6 @@
  *******************************************************************************/
 package org.eclipse.che.api.workspace.shared;
 
-import org.eclipse.che.api.core.rest.permission.Operation;
-
 /**
  * Constants for Workspace API
  *
@@ -27,7 +25,6 @@ public final class Constants {
     public static final String    LINK_REL_GET_RUNTIME_WORKSPACE = "get runtime workspace";
     public static final String    STOP_WORKSPACE                 = "stop workspace";
     public static final String    GET_ALL_USER_WORKSPACES        = "get all user workspaces";
-    public static final Operation START_WORKSPACE                = new Operation("start-workspace");
 
     public static final String LINK_REL_CREATE_STACK          = "create stack";
     public static final String LINK_REL_UPDATE_STACK          = "update stack";

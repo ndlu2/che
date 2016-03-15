@@ -26,7 +26,6 @@ import org.eclipse.che.api.core.ServerException;
 import org.eclipse.che.api.core.model.workspace.UsersWorkspace;
 import org.eclipse.che.api.core.rest.Service;
 import org.eclipse.che.api.core.rest.annotations.GenerateLink;
-import org.eclipse.che.api.core.rest.permission.PermissionManager;
 import org.eclipse.che.api.core.rest.shared.dto.Hyperlinks;
 import org.eclipse.che.api.core.rest.shared.dto.Link;
 import org.eclipse.che.api.core.rest.shared.dto.LinkParameter;
@@ -87,7 +86,6 @@ import static org.eclipse.che.api.workspace.shared.Constants.LINK_REL_GET_WORKSP
 import static org.eclipse.che.api.workspace.shared.Constants.LINK_REL_GET_WORKSPACE_EVENTS_CHANNEL;
 import static org.eclipse.che.api.workspace.shared.Constants.LINK_REL_REMOVE_WORKSPACE;
 import static org.eclipse.che.api.workspace.shared.Constants.LINK_REL_START_WORKSPACE;
-import static org.eclipse.che.api.workspace.shared.Constants.START_WORKSPACE;
 import static org.eclipse.che.api.workspace.shared.Constants.STOP_WORKSPACE;
 import static org.eclipse.che.api.workspace.server.DtoConverter.asDto;
 import static org.eclipse.che.dto.server.DtoFactory.cloneDto;
@@ -103,7 +101,6 @@ import static org.eclipse.che.dto.server.DtoFactory.newDto;
 public class WorkspaceService extends Service {
 
     private final WorkspaceManager  workspaceManager;
-    private final PermissionManager permissionManager;
     private final MachineManager    machineManager;
     //TODO: we need keep IDE context in some property to have possibility configure it because context is different in Che and Hosted packaging
     //TODO: not good solution do it here but critical for this task  https://jira.codenvycorp.com/browse/IDEX-3619
@@ -115,11 +112,9 @@ public class WorkspaceService extends Service {
     @Inject
     public WorkspaceService(WorkspaceManager workspaceManager,
                             MachineManager machineManager,
-                            @Named("service.workspace.permission_manager") PermissionManager permissionManager,
                             @Named("che.ide.context") String ideContext) {
         this.workspaceManager = workspaceManager;
         this.machineManager = machineManager;
-        this.permissionManager = permissionManager;
         this.ideContext = ideContext;
     }
 
@@ -322,7 +317,6 @@ public class WorkspaceService extends Service {
         final Map<String, String> params = Maps.newHashMapWithExpectedSize(2);
         params.put("accountId", accountId);
         params.put("workspaceId", workspaceId);
-        permissionManager.checkPermission(START_WORKSPACE, getCurrentUserId(), params);
 
         return injectLinks(asDto(workspaceManager.startWorkspaceById(workspaceId, envName, accountId)));
     }
@@ -358,7 +352,6 @@ public class WorkspaceService extends Service {
         final Map<String, String> params = Maps.newHashMapWithExpectedSize(2);
         params.put("accountId", accountId);
         params.put("workspaceId", workspace.getId());
-        permissionManager.checkPermission(START_WORKSPACE, getCurrentUserId(), params);
 
         return injectLinks(asDto(workspaceManager.startWorkspaceByName(name, getCurrentUserId(), envName, accountId)));
     }
@@ -388,7 +381,6 @@ public class WorkspaceService extends Service {
                                                                        ServerException,
                                                                        ConflictException {
         requiredNotNull(cfg, "Workspace configuration");
-        permissionManager.checkPermission(START_WORKSPACE, getCurrentUserId(), "accountId", accountId);
         return injectLinks(asDto(workspaceManager.startTemporaryWorkspace(cfg, accountId)));
     }
 
@@ -421,7 +413,6 @@ public class WorkspaceService extends Service {
         final Map<String, String> params = Maps.newHashMapWithExpectedSize(2);
         params.put("accountId", accountId);
         params.put("workspaceId", workspaceId);
-        permissionManager.checkPermission(START_WORKSPACE, getCurrentUserId(), params);
 
         return injectLinks(asDto(workspaceManager.recoverWorkspace(workspaceId, envName, accountId)));
     }
