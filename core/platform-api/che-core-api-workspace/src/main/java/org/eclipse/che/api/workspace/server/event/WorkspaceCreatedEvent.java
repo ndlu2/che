@@ -11,24 +11,22 @@
 package org.eclipse.che.api.workspace.server.event;
 
 import org.eclipse.che.api.core.model.workspace.UsersWorkspace;
+import org.eclipse.che.api.core.notification.EventOrigin;
 
 /**
+ * Informs about workspace creation.
+ *
  * @author Sergii Leschenko
  */
+@EventOrigin("workspace")
 public class WorkspaceCreatedEvent {
     private final UsersWorkspace workspace;
-    private final String         accountId;
 
-    public WorkspaceCreatedEvent(UsersWorkspace workspace, String accountId) {
+    public WorkspaceCreatedEvent(UsersWorkspace workspace) {
         this.workspace = workspace;
-        this.accountId = accountId;
     }
 
     public UsersWorkspace getWorkspace() {
         return workspace;
-    }
-
-    public String getAccountId() {
-        return accountId;
     }
 }
