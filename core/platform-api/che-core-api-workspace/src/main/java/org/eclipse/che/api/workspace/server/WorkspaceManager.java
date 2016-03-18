@@ -138,7 +138,7 @@ public class WorkspaceManager {
         workspaceDao.create(newWorkspace);
         hooks.afterCreate(newWorkspace, accountId);
 
-        eventService.publish(new WorkspaceCreatedEvent(newWorkspace, accountId));
+        eventService.publish(new WorkspaceCreatedEvent(newWorkspace));
         // TODO move 'analytics' logs to the appropriate interceptors
         LOG.info("EVENT#workspace-created# WS#{}# WS-ID#{}# USER#{}#",
                  newWorkspace.getConfig().getName(),
