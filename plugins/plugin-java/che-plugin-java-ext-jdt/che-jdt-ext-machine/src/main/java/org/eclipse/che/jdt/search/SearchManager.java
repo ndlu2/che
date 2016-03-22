@@ -17,6 +17,7 @@ import org.eclipse.che.dto.server.DtoFactory;
 import org.eclipse.che.ide.ext.java.shared.dto.Region;
 import org.eclipse.che.ide.ext.java.shared.dto.model.JavaProject;
 import org.eclipse.che.ide.ext.java.shared.dto.search.FindUsagesResponse;
+import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.jdt.core.IBuffer;
 import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.IField;
@@ -32,6 +33,9 @@ import org.eclipse.jdt.core.IType;
 import org.eclipse.jdt.core.ITypeParameter;
 import org.eclipse.jdt.core.JavaModelException;
 import org.eclipse.jdt.core.search.IJavaSearchConstants;
+import org.eclipse.jdt.core.search.SearchEngine;
+import org.eclipse.jdt.core.search.TypeNameMatch;
+import org.eclipse.jdt.core.search.TypeNameMatchRequestor;
 import org.eclipse.jdt.internal.core.DefaultWorkingCopyOwner;
 import org.eclipse.jdt.internal.core.DocumentAdapter;
 import org.eclipse.jdt.internal.ui.search.JavaSearchQuery;
@@ -53,6 +57,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import static org.eclipse.jdt.core.search.IJavaSearchConstants.WAIT_UNTIL_READY_TO_SEARCH;
 
 /**
  * Performs all Java related search.
@@ -207,5 +213,54 @@ public class SearchManager {
         } catch (JavaModelException ex) {
             return false;
         }
+    }
+
+    public List<IJavaElement> findByFqn(String fqn) throws SearchException {
+        int lastDotIndex = fqn.trim().lastIndexOf('.');
+
+        char[][] packages;
+        if (lastDotIndex == -1) {
+            packages = new char[0][];
+        } else {
+            String packageLine = fqn.substring(0, lastDotIndex);
+            packages = new char[][]{packageLine.toCharArray()};
+        }
+
+        char[][] names;
+        int nestedIndex = fqn.indexOf("$");
+        String name;
+        if (nestedIndex == -1) {
+            name = fqn.substring(lastDotIndex + 1, fqn.length());
+            names = new char[][]{name.toCharArray()};
+        } else {
+            name =fqn.substring(lastDotIndex + 1, nestedIndex);
+            names = new char[][]{name.toCharArray()};
+        }
+
+        return findByFqn(packages, names, fqn);
+    }
+
+    private List<IJavaElement> findByFqn(char[][] packages, char[][] names, String fqn) throws SearchException {
+        List<IJavaElement> result = new ArrayList<>();
+
+        SearchEngine searchEngine = new SearchEngine();
+
+        try {
+            searchEngine.searchAllTypeNames(packages,
+                                            names,
+                                            JavaSearchScopeFactory.getInstance().createWorkspaceScope(true),
+                                            new TypeNameMatchRequestor() {
+                                                @Override
+                                                public void acceptTypeNameMatch(TypeNameMatch typeNameMatch) {
+                                                    result.add(typeNameMatch.getType());
+                                                }
+                                            },
+                                            WAIT_UNTIL_READY_TO_SEARCH,
+                                            new NullProgressMonitor());
+        } catch (JavaModelException e) {
+            LOG.error(e.getMessage(), e);
+            throw new SearchException(String.format("Can't find files by FQN: %s", fqn), e);
+        }
+        return result;
     }
 }

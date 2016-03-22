@@ -10,17 +10,27 @@
  *******************************************************************************/
 package org.eclipse.che.jdt.search;
 
+import org.eclipse.core.runtime.NullProgressMonitor;
+import org.eclipse.jdt.core.IJavaElement;
 import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.IMethod;
 import org.eclipse.jdt.core.IType;
 import org.eclipse.jdt.core.JavaModelException;
 import org.eclipse.jdt.core.search.IJavaSearchConstants;
+import org.eclipse.jdt.core.search.SearchEngine;
+import org.eclipse.jdt.core.search.TypeNameMatch;
+import org.eclipse.jdt.core.search.TypeNameMatchRequestor;
 import org.eclipse.jdt.internal.ui.search.JavaSearchQuery;
 import org.eclipse.jdt.internal.ui.search.JavaSearchResult;
 import org.eclipse.jdt.internal.ui.search.JavaSearchScopeFactory;
 import org.eclipse.jdt.ui.search.ElementQuerySpecification;
 import org.eclipse.jdt.ui.search.PatternQuerySpecification;
 import org.eclipse.search.NewSearchUI;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import static org.eclipse.jdt.core.search.IJavaSearchConstants.WAIT_UNTIL_READY_TO_SEARCH;
 
 public class SearchTestHelper {
     static int countMethodRefs(String TypeName, String methodName, String[] parameterTypes) throws JavaModelException {
@@ -55,6 +65,25 @@ public class SearchTestHelper {
                                                                                   "workspace scope"));
         NewSearchUI.runQueryInForeground(null, query);
         return query;
+    }
+
+    static List<IJavaElement> runTypeRefByFQN(char[][] packages, char[][] names) throws JavaModelException {
+        List<IJavaElement> result = new ArrayList<>();
+
+        SearchEngine searchEngine = new SearchEngine();
+
+        searchEngine.searchAllTypeNames(packages,
+                                        names,
+                                        JavaSearchScopeFactory.getInstance().createWorkspaceScope(true),
+                                        new TypeNameMatchRequestor() {
+                                            @Override
+                                            public void acceptTypeNameMatch(TypeNameMatch typeNameMatch) {
+                                                result.add(typeNameMatch.getType());
+                                            }
+                                        },
+                                        WAIT_UNTIL_READY_TO_SEARCH,
+                                        new NullProgressMonitor());
+        return result;
     }
 
     static JavaSearchQuery runMethodRefQuery(String methodName) {
