@@ -15,6 +15,7 @@ import org.eclipse.che.api.promises.client.js.Promises;
 import org.eclipse.che.ide.api.project.node.AbstractTreeNode;
 import org.eclipse.che.ide.api.project.node.HasAction;
 import org.eclipse.che.ide.api.project.node.Node;
+import org.eclipse.che.ide.project.shared.NodesResources;
 import org.eclipse.che.ide.ui.smartTree.presentation.HasPresentation;
 import org.eclipse.che.ide.ui.smartTree.presentation.NodePresentation;
 
@@ -27,24 +28,33 @@ import java.util.List;
  *
  * @author Igor Vinokur
  */
-public class ChangedNode extends AbstractTreeNode implements HasPresentation, HasAction {
+public class ChangedFileNode extends AbstractTreeNode implements HasPresentation, HasAction {
 
-    private String name;
-    private String state;
-
+    private String           pathName;
+    private String           state;
     private NodePresentation nodePresentation;
 
+    private final NodesResources nodesResources;
+    private final boolean        viewPath;
+
     /**
-     * Create instance of ChangedNode.
+     * Create instance of ChangedFileNode.
      *
-     * @param name
+     * @param pathName
      *         name of the file that represents this node with its full path
      * @param state
      *         state of the file that represents this node
+     * @param nodesResources
+     *         resources that contain icons
+     * @param viewPath
+     *         <code>true</code> if it is needed to view file name with its full path,
+     *         and <code>false</code> if it is needed to view only name of the file
      */
-    public ChangedNode(String name, String state) {
-        this.name = name;
+    public ChangedFileNode(String pathName, String state, NodesResources nodesResources, boolean viewPath) {
+        this.pathName = pathName;
         this.state = state;
+        this.nodesResources = nodesResources;
+        this.viewPath = viewPath;
     }
 
     @Override
@@ -54,7 +64,7 @@ public class ChangedNode extends AbstractTreeNode implements HasPresentation, Ha
 
     @Override
     public String getName() {
-        return name;
+        return pathName;
     }
 
     /**
@@ -73,7 +83,10 @@ public class ChangedNode extends AbstractTreeNode implements HasPresentation, Ha
 
     @Override
     public void updatePresentation(@NotNull NodePresentation presentation) {
-        presentation.setPresentableText(name);
+        String path = pathName.substring(0, pathName.lastIndexOf("/"));
+        String name = pathName.substring(pathName.lastIndexOf("/") + 1);
+        presentation.setPresentableText(viewPath ? name : path.isEmpty() ? name : path + "/" + name);
+        presentation.setPresentableIcon(nodesResources.file());
 
         if (state.startsWith("M")) {
             presentation.setPresentableTextCss("color: DodgerBlue ;");

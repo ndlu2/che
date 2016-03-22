@@ -465,6 +465,8 @@ public interface GitLocalizationConstant extends Messages {
     // ChangeList
     @Key("view.change.list.title")
     String changeListTitle();
+    @Key("view.change.list.group.by.directory.checkbox.title")
+    String changeListGroupByDirectoryCheckboxTitle();
 
     // Fetch
     @Key("view.fetch.title")

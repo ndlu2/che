@@ -14,7 +14,14 @@
 <ui:UiBinder xmlns:ui='urn:ui:com.google.gwt.uibinder'
              xmlns:g='urn:import:com.google.gwt.user.client.ui'>
     <ui:with field='res' type='org.eclipse.che.ide.ext.git.client.GitResources'/>
-    <g:DockLayoutPanel ui:field="changedFilesPanel" unit="PX" width="800px" height="500px"
-                       addStyleNames="{res.gitCSS.simpleListContainer}"
-                       debugId="git-changed-filesPanel"/>
+    <ui:with field='locale' type='org.eclipse.che.ide.ext.git.client.GitLocalizationConstant'/>
+
+    <g:DockLayoutPanel unit="PX" width="800px" height="500px">
+        <g:north size="20">
+            <g:CheckBox ui:field="groupByDirectory" HTML="{locale.changeListGroupByDirectoryCheckboxTitle}"/>
+        </g:north>
+        <g:center>
+            <g:LayoutPanel ui:field="changedFilesPanel" addStyleNames="{res.gitCSS.simpleListContainer}"/>
+        </g:center>
+    </g:DockLayoutPanel>
 </ui:UiBinder>

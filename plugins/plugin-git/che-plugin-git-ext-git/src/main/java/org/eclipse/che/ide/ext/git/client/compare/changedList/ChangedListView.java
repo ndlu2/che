@@ -24,22 +24,25 @@ import java.util.Map;
 public interface ChangedListView extends View<ChangedListView.ActionDelegate> {
     /** Needs for delegate some function into Changed list view. */
     interface ActionDelegate {
-        /** Performs any actions appropriate in response to the user having pressed the Close button. */
+        /** Performs any actions appropriate in response to the user having pressed the 'Close' button. */
         void onCloseClicked();
 
-        /** Performs any actions appropriate in response to the user having pressed the Compare button. */
-        void onCompareClicked();
+        /** Performs any actions appropriate in response to the user having provided compare action. */
+        void onCompareProvided();
+
+        /** Performs any actions appropriate in response to the user having changed the 'Group by directory' check-box value. */
+        void onGroupByDirectoryCheckBoxValueChanged();
 
         /**
-         * Performs any action in response to the user having select node.
+         * Performs any action in response to the user having select file node.
          *
          * @param node
-         *         selected node
+         *         selected file node
          */
-        void onNodeSelected(@NotNull Node node);
+        void onFileNodeSelected(@NotNull Node node);
 
-        /** Performs any action in response to the user do not have any selected node. */
-        void onNodeUnselected();
+        /** Performs any action in response to the user do not have any selected file node. */
+        void onFileNodeUnselected();
     }
 
     /**

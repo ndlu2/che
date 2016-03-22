@@ -30,9 +30,10 @@ public class ChangedListPresenter implements ChangedListView.ActionDelegate {
     private final ChangedListView  view;
     private final ComparePresenter comparePresenter;
 
-    private String file;
-    private String state;
-    private String revision;
+    private String              file;
+    private String              state;
+    private String              revision;
+    private Map<String, String> changedFiles;
 
     @Inject
     public ChangedListPresenter(ChangedListView view,
@@ -51,6 +52,7 @@ public class ChangedListPresenter implements ChangedListView.ActionDelegate {
      *         hash of revision or branch
      */
     public void show(Map<String, String> changedFiles, String revision) {
+        this.changedFiles = changedFiles;
         view.showDialog();
         view.setChanges(changedFiles);
         view.setEnableCompareButton(false);
@@ -65,21 +67,27 @@ public class ChangedListPresenter implements ChangedListView.ActionDelegate {
 
     /** {@inheritDoc} */
     @Override
-    public void onCompareClicked() {
+    public void onCompareProvided() {
         comparePresenter.show(file, state, revision);
     }
 
     /** {@inheritDoc} */
     @Override
-    public void onNodeSelected(@NotNull Node node) {
-        view.setEnableCompareButton(true);
-        this.file = node.getName();
-        this.state = ((ChangedNode)node).getState();
+    public void onGroupByDirectoryCheckBoxValueChanged() {
+        view.setChanges(changedFiles);
     }
 
     /** {@inheritDoc} */
     @Override
-    public void onNodeUnselected() {
+    public void onFileNodeSelected(@NotNull Node node) {
+        view.setEnableCompareButton(true);
+        this.file = node.getName();
+        this.state = ((ChangedFileNode)node).getState();
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public void onFileNodeUnselected() {
         view.setEnableCompareButton(false);
     }
 }
