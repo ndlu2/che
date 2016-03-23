@@ -11,6 +11,12 @@
 
 package org.eclipse.jdt.internal.core;
 
+import org.eclipse.che.api.core.ConflictException;
+import org.eclipse.che.api.core.ForbiddenException;
+import org.eclipse.che.api.core.ServerException;
+import org.eclipse.che.api.core.notification.EventSubscriber;
+import org.eclipse.che.api.vfs.VirtualFileSystemProvider;
+import org.eclipse.che.api.workspace.shared.dto.event.WorkspaceStatusEvent;
 import org.eclipse.che.jdt.core.launching.JREContainerInitializer;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IFolder;
@@ -62,8 +68,10 @@ import org.eclipse.jdt.internal.core.util.Util;
 import org.eclipse.jdt.internal.core.util.WeakHashSet;
 import org.eclipse.jdt.internal.core.util.WeakHashSetOfCharArray;
 
+import javax.inject.Inject;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.util.Collections;
 import java.util.HashMap;
@@ -79,8 +87,21 @@ import java.util.zip.ZipFile;
 /**
  * @author Evgen Vidolob
  */
-public class JavaModelManager {
+public class JavaModelManager  {
     private static Map<String, String> defaultOptions= new HashMap<>();
+
+//    implements EventSubscriber<WorkspaceStatusEvent>
+//    @Override
+//    public void onEvent(WorkspaceStatusEvent event) {
+//        event.getEventType();
+//        IPath oldPackageName = new Path("dsgg");
+//        try {
+//            InputStream contents = ResourcesPlugin.getWorkspace().getRoot().getFile(oldPackageName).getContents();
+//        } catch (CoreException e) {
+//            e.printStackTrace();
+//        }
+//    }
+
     static {
         defaultOptions.put(JavaCore.COMPILER_COMPLIANCE, org.eclipse.jdt.core.JavaCore.VERSION_1_8);
         defaultOptions.put(CompilerOptions.OPTION_TargetPlatform, org.eclipse.jdt.core.JavaCore.VERSION_1_8);

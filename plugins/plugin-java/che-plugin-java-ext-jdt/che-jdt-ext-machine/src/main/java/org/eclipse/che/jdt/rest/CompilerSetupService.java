@@ -11,12 +11,19 @@
 
 package org.eclipse.che.jdt.rest;
 
+import org.eclipse.che.api.core.ConflictException;
+import org.eclipse.che.api.core.ForbiddenException;
+import org.eclipse.che.api.core.ServerException;
+import org.eclipse.che.api.vfs.VirtualFile;
+import org.eclipse.che.api.vfs.VirtualFileSystemProvider;
+import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.internal.compiler.impl.CompilerOptions;
 import org.eclipse.jdt.internal.core.JavaModel;
 import org.eclipse.jdt.internal.core.JavaModelManager;
 
+import javax.inject.Inject;
 import javax.validation.constraints.NotNull;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
@@ -37,6 +44,8 @@ import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
  */
 @Path("/jdt/{wsId}/compiler-settings")
 public class CompilerSetupService {
+    @Inject
+    VirtualFileSystemProvider vfsProvider;
 
     private static final JavaModel JAVA_MODEL = JavaModelManager.getJavaModelManager().getJavaModel();
 
@@ -50,9 +59,22 @@ public class CompilerSetupService {
     @POST
     @Path("/set")
     @Consumes(APPLICATION_JSON)
-    public void setParameters(@QueryParam("projectpath") String projectPath, @NotNull Map<String, String> changedParameters) {
+    public void setParameters(@QueryParam("projectpath") String projectPath, @NotNull Map<String, String> changedParameters) throws ServerException, ConflictException, ForbiddenException {
         if (projectPath == null || projectPath.isEmpty()) {
             JavaCore.setOptions(new Hashtable<>(changedParameters));
+
+
+            StringBuilder stringBuilder = new StringBuilder();
+            for (String parameter : changedParameters.keySet()) {
+                stringBuilder.
+            }
+
+            VirtualFile file = vfsProvider.getVirtualFileSystem().getRoot().getChild(org.eclipse.che.api.vfs.Path.of("file"));
+            if (file == null) {
+                vfsProvider.getVirtualFileSystem().getRoot().createFile("file", "hello");
+            }
+
+
             return;
         }
         IJavaProject project = JAVA_MODEL.getJavaProject(projectPath);
@@ -70,8 +92,15 @@ public class CompilerSetupService {
     @Path("/all")
     @Consumes(APPLICATION_JSON)
     @Produces(APPLICATION_JSON)
-    public Map<String, String> getAllParameters(@QueryParam("projectpath") String projectPath) {
+    public Map<String, String> getAllParameters(@QueryParam("projectpath") String projectPath)
+            throws ServerException, ConflictException, ForbiddenException {
         if (projectPath == null || projectPath.isEmpty()) {
+
+
+            VirtualFile file = vfsProvider.getVirtualFileSystem().getRoot().getChild(org.eclipse.che.api.vfs.Path.of("file"));
+
+
+
             //noinspection unchecked
             CompilerOptions options = new CompilerOptions(new HashMap<>(JavaCore.getOptions()));
             //noinspection unchecked
@@ -83,6 +112,11 @@ public class CompilerSetupService {
         //noinspection unchecked
         Map<String, String> map = project.getOptions(true);
         CompilerOptions options = new CompilerOptions(map);
+
+//        VirtualFile file = vfsProvider.getVirtualFileSystem().getRoot().getChild(org.eclipse.che.api.vfs.Path.of(".codenvy"));
+//        if (file.exists()) {
+            vfsProvider.getVirtualFileSystem().getRoot().createFile("file", "hello");
+//        }
 
         //noinspection unchecked
         return options.getMap();
