@@ -733,7 +733,7 @@ public class WorkspaceManager {
                 return workspaceDao.get(wsName, ownerId);
             }
             default: {
-                throw new BadRequestException(format("Wrong composite key format: %s", key));
+                throw new BadRequestException(format("Wrong composite key %s. Format should be 'username:workspace_name'. ", key));
             }
         }
     }
