@@ -45,6 +45,14 @@ import org.eclipse.che.plugin.docker.client.json.Image;
 import org.eclipse.che.plugin.docker.client.json.ImageInfo;
 import org.eclipse.che.plugin.docker.client.json.ProgressStatus;
 import org.eclipse.che.plugin.docker.client.json.Version;
+import org.eclipse.che.plugin.docker.client.params.CreateContainerParams;
+import org.eclipse.che.plugin.docker.client.params.InspectImageParams;
+import org.eclipse.che.plugin.docker.client.params.PullParams;
+import org.eclipse.che.plugin.docker.client.params.PushParams;
+import org.eclipse.che.plugin.docker.client.params.RemoveImageParams;
+import org.eclipse.che.plugin.docker.client.params.StartContainerParams;
+import org.eclipse.che.plugin.docker.client.params.StopContainerParams;
+import org.eclipse.che.plugin.docker.client.params.TagParams;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -82,13 +90,12 @@ import static javax.ws.rs.core.Response.Status.OK;
  * @author andrew00x
  * @author Alexander Garagatyi
  * @author Anton Korneta
- *
- * @deprecated use {@link DockerClient} instead
+ * @author Mykola Morhun
  */
 @Singleton
-@Deprecated
-public class DockerConnector {
-    private static final Logger LOG = LoggerFactory.getLogger(DockerConnector.class);
+@SuppressWarnings("all") // TODO remove it
+public class DockerClient {
+    private static final Logger LOG = LoggerFactory.getLogger(DockerClient.class);
 
     private final URI                     dockerDaemonUri;
     private final InitialAuthConfig       initialAuthConfig;
@@ -96,8 +103,8 @@ public class DockerConnector {
     private final DockerConnectionFactory connectionFactory;
 
     @Inject
-    public DockerConnector(DockerConnectorConfiguration connectorConfiguration, 
-                           DockerConnectionFactory connectionFactory) {
+    public DockerClient(DockerConnectorConfiguration connectorConfiguration,
+                        DockerConnectionFactory connectionFactory) {
         this.dockerDaemonUri = connectorConfiguration.getDockerDaemonUri();
         this.initialAuthConfig = connectorConfiguration.getAuthConfigs();
         this.connectionFactory = connectionFactory;
@@ -248,16 +255,15 @@ public class DockerConnector {
     /**
      * Gets detailed information about docker image.
      *
-     * @param image
-     *         id or full repository name of docker image
+     * @param params
+     *         parameters holder
      * @return detailed information about {@code image}
      * @throws IOException
+     *         when problems occurs with docker api calls
      */
-    public ImageInfo inspectImage(String image) throws IOException {
-        return doInspectImage(image, dockerDaemonUri);
-    }
+    public ImageInfo inspectImage(InspectImageParams params) throws IOException {
+        final String image = params.getImage();
 
-    protected ImageInfo doInspectImage(String image, URI dockerDaemonUri) throws IOException {
         try (DockerConnection connection = connectionFactory.openConnection(dockerDaemonUri)
                                                             .method("GET")
                                                             .path("/images/" + image + "/json")) {
@@ -272,36 +278,162 @@ public class DockerConnector {
         }
     }
 
-    public void removeImage(String image, boolean force) throws IOException {
-        doRemoveImage(image, force, dockerDaemonUri);
+    /**
+     * Removes docker image.
+     *
+     * @param params
+     *         parameters holder
+     * @throws IOException
+     *         when problems occurs with docker api calls
+     */
+    public void removeImage(RemoveImageParams params) throws IOException {
+        final String image = params.getImage();
+        final boolean force = params.isForce();
+
+        try (DockerConnection connection = connectionFactory.openConnection(dockerDaemonUri)
+                                                            .method("DELETE")
+                                                            .path("/images/" + image)
+                                                            .query("force", force ? 1 : 0)) {
+            final DockerResponse response = connection.request();
+            final int status = response.getStatus();
+            if (OK.getStatusCode() != status) {
+                throw getDockerException(response);
+            }
+        }
     }
 
-    public void tag(String image, String repository, String tag) throws IOException {
-        doTag(image, repository, tag, dockerDaemonUri);
+    /**
+     * Tag the docker image into a repository
+     *
+     * @param params
+     *         parameters holder
+     * @throws IOException
+     *         when problems occurs with docker api calls
+     */
+    public void tag(TagParams params) throws IOException {
+        final String image = params.getImage();
+        final String repository = params.getRepository();
+        final String tag = params.getTag();
+        final boolean force = params.isForce();
+
+        final List<Pair<String, ?>> headers = new ArrayList<>(3);
+        headers.add(Pair.of("Content-Type", MediaType.TEXT_PLAIN));
+        headers.add(Pair.of("Content-Length", 0));
+
+        try (DockerConnection connection = connectionFactory.openConnection(dockerDaemonUri)
+                                                            .method("POST")
+                                                            .path("/images/" + image + "/tag")
+                                                            .query("repo", repository)
+                                                            .query("force", force)
+                                                            .headers(headers)) {
+            if (tag != null) {
+                connection.query("tag", tag);
+            }
+            final DockerResponse response = connection.request();
+            final int status = response.getStatus();
+            if (status / 100 != 2) {
+                throw getDockerException(response);
+            }
+        }
     }
 
     /**
      * Push docker image to the registry
      *
-     * @param repository
-     *         full repository name to be applied to newly created image
-     * @param tag
-     *         tag of the image
-     * @param registry
-     *         registry url
-     * @param progressMonitor
-     *         ProgressMonitor for images creation process
+     * @param params
+     *         parameters holder
      * @return digest of just pushed image
      * @throws IOException
      *         when problems occurs with docker api calls
      * @throws InterruptedException
      *         if push process was interrupted
      */
-    public String push(String repository,
-                       String tag,
-                       String registry,
-                       final ProgressMonitor progressMonitor) throws IOException, InterruptedException {
-        return doPush(repository, tag, registry, progressMonitor, dockerDaemonUri);
+    public String push(PushParams params) throws IOException, InterruptedException {
+        final String repository = params.getRepository();
+        final String tag = params.getTag();
+        final String registry = params.getRegistry();
+        final ProgressMonitor progressMonitor = params.getProgressMonitor();
+
+        final List<Pair<String, ?>> headers = new ArrayList<>(3);
+        headers.add(Pair.of("Content-Type", MediaType.TEXT_PLAIN));
+        headers.add(Pair.of("Content-Length", 0));
+        headers.add(Pair.of("X-Registry-Auth", initialAuthConfig.getAuthConfigHeader()));
+        final String fullRepo = registry != null ? registry + "/" + repository : repository;
+        final ValueHolder<String> digestHolder = new ValueHolder<>();
+
+        try (DockerConnection connection = connectionFactory.openConnection(dockerDaemonUri)
+                                                            .method("POST")
+                                                            .path("/images/" + fullRepo + "/push")
+                                                            .headers(headers)) {
+            if (tag != null) {
+                connection.query("tag", tag);
+            }
+            final DockerResponse response = connection.request();
+            final int status = response.getStatus();
+            if (OK.getStatusCode() != status) {
+                throw getDockerException(response);
+            }
+            try (InputStream responseStream = response.getInputStream()) {
+                JsonMessageReader<ProgressStatus> progressReader = new JsonMessageReader<>(responseStream, ProgressStatus.class);
+
+                final ValueHolder<IOException> errorHolder = new ValueHolder<>();
+                //it is necessary to track errors during the push, this is useful in the case when docker API returns status 200 OK,
+                //but in fact we have an error (e.g docker registry is not accessible but we are trying to push).
+                final ValueHolder<String> exceptionHolder = new ValueHolder<>();
+                // Here do some trick to be able interrupt push process. Basically for now it is not possible interrupt docker daemon while
+                // it's pushing images but here we need just be able to close connection to the unix socket. Thread is blocking while read
+                // from the socket stream so need one more thread that is able to close socket. In this way we can release thread that is
+                // blocking on i/o.
+                final Runnable runnable = new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            String digestPrefix = firstNonNull(tag, "latest") + ": digest: ";
+                            ProgressStatus progressStatus;
+                            while ((progressStatus = progressReader.next()) != null && exceptionHolder.get() == null) {
+                                progressMonitor.updateProgress(progressStatus);
+                                if (progressStatus.getError() != null) {
+                                    exceptionHolder.set(progressStatus.getError());
+                                }
+                                String status = progressStatus.getStatus();
+                                // Here we find string with digest which has following format:
+                                // <tag>: digest: <digest> size: <size>
+                                // for example:
+                                // latest: digest: sha256:9a70e6222ded459fde37c56af23887467c512628eb8e78c901f3390e49a800a0 size: 62189
+                                if (status != null && status.startsWith(digestPrefix)) {
+                                    String digest = status.substring(digestPrefix.length(), status.indexOf(" ", digestPrefix.length()));
+                                    digestHolder.set(digest);
+                                }
+                            }
+                        } catch (IOException e) {
+                            errorHolder.set(e);
+                        }
+                        synchronized (this) {
+                            notify();
+                        }
+                    }
+                };
+                executor.execute(runnable);
+                // noinspection SynchronizationOnLocalVariableOrMethodParameter
+                synchronized (runnable) {
+                    runnable.wait();
+                }
+                if (exceptionHolder.get() != null) {
+                    throw new DockerException(exceptionHolder.get(), 500);
+                }
+                if (digestHolder.get() == null) {
+                    LOG.error("Docker image {}:{} was successfully pushed, but its digest wasn't obtained",
+                              fullRepo,
+                              firstNonNull(tag, "latest"));
+                    throw new DockerException("Docker image was successfully pushed, but its digest wasn't obtained", 500);
+                }
+                final IOException ioe = errorHolder.get();
+                if (ioe != null) {
+                    throw ioe;
+                }
+            }
+        }
+        return digestHolder.get();
     }
 
     /**
@@ -309,43 +441,166 @@ public class DockerConnector {
      * image</a>.
      * To pull from private registry use registry.address:port/image as image. This is not documented.
      *
+     * @param params
+     *         parameters holder
      * @throws IOException
+     *         when problems occurs with docker api calls
      * @throws InterruptedException
+     *         if push process was interrupted
      */
-    public void pull(String image,
-                     String tag,
-                     String registry,
-                     ProgressMonitor progressMonitor) throws IOException, InterruptedException {
-        doPull(image, tag, registry, progressMonitor, dockerDaemonUri);
+    public void pull(PullParams params) throws IOException, InterruptedException {
+        final String image = params.getImage();
+        final String tag = params.getTag();
+        final String registry = params.getRegistry();
+        final ProgressMonitor progressMonitor = params.getProgressMonitor();
+
+        final List<Pair<String, ?>> headers = new ArrayList<>(3);
+        headers.add(Pair.of("Content-Type", MediaType.TEXT_PLAIN));
+        headers.add(Pair.of("Content-Length", 0));
+        headers.add(Pair.of("X-Registry-Auth", initialAuthConfig.getAuthConfigHeader()));
+
+        try (DockerConnection connection = connectionFactory.openConnection(dockerDaemonUri)
+                                                            .method("POST")
+                                                            .path("/images/create")
+                                                            .query("fromImage", registry != null ? registry + "/" + image : image)
+                                                            .headers(headers)) {
+            if (tag != null) {
+                connection.query("tag", tag);
+            }
+            final DockerResponse response = connection.request();
+            final int status = response.getStatus();
+            if (OK.getStatusCode() != status) {
+                throw getDockerException(response);
+            }
+            try (InputStream responseStream = response.getInputStream()) {
+                JsonMessageReader<ProgressStatus> progressReader = new JsonMessageReader<>(responseStream, ProgressStatus.class);
+
+                final ValueHolder<IOException> errorHolder = new ValueHolder<>();
+                // Here do some trick to be able interrupt pull process. Basically for now it is not possible interrupt docker daemon while
+                // it's pulling images but here we need just be able to close connection to the unix socket. Thread is blocking while read
+                // from the socket stream so need one more thread that is able to close socket. In this way we can release thread that is
+                // blocking on i/o.
+                final Runnable runnable = new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            ProgressStatus progressStatus;
+                            while ((progressStatus = progressReader.next()) != null) {
+                                progressMonitor.updateProgress(progressStatus);
+                            }
+                        } catch (IOException e) {
+                            errorHolder.set(e);
+                        }
+                        synchronized (this) {
+                            notify();
+                        }
+                    }
+                };
+                executor.execute(runnable);
+                // noinspection SynchronizationOnLocalVariableOrMethodParameter
+                synchronized (runnable) {
+                    runnable.wait();
+                }
+                final IOException ioe = errorHolder.get();
+                if (ioe != null) {
+                    throw ioe;
+                }
+            }
+        }
     }
 
-    public ContainerCreated createContainer(ContainerConfig containerConfig, String containerName) throws IOException {
-        return doCreateContainer(containerConfig, containerName, dockerDaemonUri);
+    /**
+     * Creates docker container.
+     *
+     * @param params
+     *         parameters holder
+     * @throws IOException
+     *         when problems occurs with docker api calls
+     */
+    public ContainerCreated createContainer(CreateContainerParams params) throws IOException {
+        final ContainerConfig containerConfig = params.getContainerConfig();
+        final String containerName = params.getContainerName();
+
+        final List<Pair<String, ?>> headers = new ArrayList<>(2);
+        headers.add(Pair.of("Content-Type", MediaType.APPLICATION_JSON));
+        final String entity = JsonHelper.toJson(containerConfig, FIRST_LETTER_LOWERCASE);
+        headers.add(Pair.of("Content-Length", entity.getBytes().length));
+
+        try (DockerConnection connection = connectionFactory.openConnection(dockerDaemonUri)
+                                                            .method("POST")
+                                                            .path("/containers/create")
+                                                            .headers(headers)
+                                                            .entity(entity)) {
+            if (containerName != null) {
+                connection.query("name", containerName);
+            }
+            final DockerResponse response = connection.request();
+            final int status = response.getStatus();
+            if (CREATED.getStatusCode() != status) {
+                throw getDockerException(response);
+            }
+            return parseResponseStreamAndClose(response.getInputStream(), ContainerCreated.class);
+        } catch (JsonParseException e) {
+            throw new IOException(e.getLocalizedMessage(), e);
+        }
     }
 
-    public void startContainer(String container, HostConfig hostConfig) throws IOException {
-        doStartContainer(container, hostConfig, dockerDaemonUri);
+    /**
+     * Starts docker container.
+     *
+     * @param params
+     *         parameters holder
+     * @throws IOException
+     *         when problems occurs with docker api calls
+     */
+    public void startContainer(StartContainerParams params) throws IOException {
+        final String container = params.getContainer();
+        final HostConfig hostConfig = params.getHostConfig();
+
+        final List<Pair<String, ?>> headers = new ArrayList<>(2);
+        headers.add(Pair.of("Content-Type", MediaType.APPLICATION_JSON));
+        final String entity = hostConfig == null ? "{}" : JsonHelper.toJson(hostConfig, FIRST_LETTER_LOWERCASE);
+        headers.add(Pair.of("Content-Length", entity.getBytes().length));
+
+        try (DockerConnection connection = connectionFactory.openConnection(dockerDaemonUri)
+                                                            .method("POST")
+                                                            .path("/containers/" + container + "/start")
+                                                            .headers(headers)
+                                                            .entity(entity)) {
+            final DockerResponse response = connection.request();
+            final int status = response.getStatus();
+            if (!(NO_CONTENT.getStatusCode() == status || NOT_MODIFIED.getStatusCode() == status)) {
+
+                final DockerException dockerException = getDockerException(response);
+                if (OK.getStatusCode() == status) {
+                    // docker API 1.20 returns 200 with warning message about usage of loopback docker backend
+                    LOG.warn(dockerException.getLocalizedMessage());
+                } else {
+                    throw dockerException;
+                }
+            }
+        }
     }
 
     /**
      * Stops container.
      *
-     * @param container
-     *         container identifier, either id or name
-     * @param timeout
-     *         time to wait for the container to stop before killing it
-     * @param timeunit
-     *         time unit of the timeout parameter
+     * @param params
+     *         parameters holder
      * @throws IOException
+     *         when problems occurs with docker api calls
      */
-    public void stopContainer(String container, long timeout, TimeUnit timeunit) throws IOException {
+    public void stopContainer(StopContainerParams params) throws IOException {
+        String container = params.getContainer();
+        long timeout = params.getTimeunit().toSeconds(params.getTimeout());
+
         final List<Pair<String, ?>> headers = new ArrayList<>(2);
         headers.add(Pair.of("Content-Type", MediaType.TEXT_PLAIN));
         headers.add(Pair.of("Content-Length", 0));
         try (DockerConnection connection = connectionFactory.openConnection(dockerDaemonUri)
                                                             .method("POST")
                                                             .path("/containers/" + container + "/stop")
-                                                            .query("t", timeunit.toSeconds(timeout))
+                                                            .query("t", timeout)
                                                             .headers(headers)) {
             final DockerResponse response = connection.request();
             final int status = response.getStatus();
@@ -483,7 +738,7 @@ public class DockerConnector {
      * @param stream
      *         if {@code true} then get 'live' stream from container. Typically need to run this method in separate thread, if {@code
      *         stream} is {@code true} since this method blocks until container is running.
-     * @throws java.io.IOException
+     * @throws IOException
      */
     public void attachContainer(String container, MessageProcessor<LogMessage> containerLogsProcessor, boolean stream) throws IOException {
         final List<Pair<String, ?>> headers = new ArrayList<>(2);
@@ -919,128 +1174,6 @@ public class DockerConnector {
         }
     }
 
-    protected void doRemoveImage(String image, boolean force, URI dockerDaemonUri) throws IOException {
-        try (DockerConnection connection = connectionFactory.openConnection(dockerDaemonUri)
-                                                            .method("DELETE")
-                                                            .path("/images/" + image)
-                                                            .query("force", force ? 1 : 0)) {
-            final DockerResponse response = connection.request();
-            final int status = response.getStatus();
-            if (OK.getStatusCode() != status) {
-                throw getDockerException(response);
-            }
-        }
-    }
-
-    protected void doTag(String image, String repository, String tag, URI dockerDaemonUri) throws IOException {
-        final List<Pair<String, ?>> headers = new ArrayList<>(3);
-        headers.add(Pair.of("Content-Type", MediaType.TEXT_PLAIN));
-        headers.add(Pair.of("Content-Length", 0));
-
-        try (DockerConnection connection = connectionFactory.openConnection(dockerDaemonUri)
-                                                            .method("POST")
-                                                            .path("/images/" + image + "/tag")
-                                                            .query("repo", repository)
-                                                            .query("force", 0)
-                                                            .headers(headers)) {
-            if (tag != null) {
-                connection.query("tag", tag);
-            }
-            final DockerResponse response = connection.request();
-            final int status = response.getStatus();
-            if (status / 100 != 2) {
-                throw getDockerException(response);
-            }
-        }
-    }
-
-    protected String doPush(final String repository,
-                            final String tag,
-                            final String registry,
-                            final ProgressMonitor progressMonitor,
-                            final URI dockerDaemonUri) throws IOException, InterruptedException {
-        final List<Pair<String, ?>> headers = new ArrayList<>(3);
-        headers.add(Pair.of("Content-Type", MediaType.TEXT_PLAIN));
-        headers.add(Pair.of("Content-Length", 0));
-        headers.add(Pair.of("X-Registry-Auth", initialAuthConfig.getAuthConfigHeader()));
-        final String fullRepo = registry != null ? registry + "/" + repository : repository;
-        final ValueHolder<String> digestHolder = new ValueHolder<>();
-
-        try (DockerConnection connection = connectionFactory.openConnection(dockerDaemonUri)
-                                                            .method("POST")
-                                                            .path("/images/" + fullRepo + "/push")
-                                                            .headers(headers)) {
-            if (tag != null) {
-                connection.query("tag", tag);
-            }
-            final DockerResponse response = connection.request();
-            final int status = response.getStatus();
-            if (OK.getStatusCode() != status) {
-                throw getDockerException(response);
-            }
-            try (InputStream responseStream = response.getInputStream()) {
-                JsonMessageReader<ProgressStatus> progressReader = new JsonMessageReader<>(responseStream, ProgressStatus.class);
-
-                final ValueHolder<IOException> errorHolder = new ValueHolder<>();
-                //it is necessary to track errors during the push, this is useful in the case when docker API returns status 200 OK,
-                //but in fact we have an error (e.g docker registry is not accessible but we are trying to push).
-                final ValueHolder<String> exceptionHolder = new ValueHolder<>();
-                // Here do some trick to be able interrupt push process. Basically for now it is not possible interrupt docker daemon while
-                // it's pushing images but here we need just be able to close connection to the unix socket. Thread is blocking while read
-                // from the socket stream so need one more thread that is able to close socket. In this way we can release thread that is
-                // blocking on i/o.
-                final Runnable runnable = new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            String digestPrefix = firstNonNull(tag, "latest") + ": digest: ";
-                            ProgressStatus progressStatus;
-                            while ((progressStatus = progressReader.next()) != null && exceptionHolder.get() == null) {
-                                progressMonitor.updateProgress(progressStatus);
-                                if (progressStatus.getError() != null) {
-                                    exceptionHolder.set(progressStatus.getError());
-                                }
-                                String status = progressStatus.getStatus();
-                                // Here we find string with digest which has following format:
-                                // <tag>: digest: <digest> size: <size>
-                                // for example:
-                                // latest: digest: sha256:9a70e6222ded459fde37c56af23887467c512628eb8e78c901f3390e49a800a0 size: 62189
-                                if (status != null && status.startsWith(digestPrefix)) {
-                                    String digest = status.substring(digestPrefix.length(), status.indexOf(" ", digestPrefix.length()));
-                                    digestHolder.set(digest);
-                                }
-                            }
-                        } catch (IOException e) {
-                            errorHolder.set(e);
-                        }
-                        synchronized (this) {
-                            notify();
-                        }
-                    }
-                };
-                executor.execute(runnable);
-                // noinspection SynchronizationOnLocalVariableOrMethodParameter
-                synchronized (runnable) {
-                    runnable.wait();
-                }
-                if (exceptionHolder.get() != null) {
-                    throw new DockerException(exceptionHolder.get(), 500);
-                }
-                if (digestHolder.get() == null) {
-                    LOG.error("Docker image {}:{} was successfully pushed, but its digest wasn't obtained",
-                              fullRepo,
-                              firstNonNull(tag, "latest"));
-                    throw new DockerException("Docker image was successfully pushed, but its digest wasn't obtained", 500);
-                }
-                final IOException ioe = errorHolder.get();
-                if (ioe != null) {
-                    throw ioe;
-                }
-            }
-        }
-        return digestHolder.get();
-    }
-
     protected String doCommit(String container,
                               String repository,
                               String tag,
@@ -1077,121 +1210,6 @@ public class DockerConnector {
             return parseResponseStreamAndClose(response.getInputStream(), ContainerCommited.class).getId();
         } catch (JsonParseException e) {
             throw new IOException(e.getLocalizedMessage(), e);
-        }
-    }
-
-    protected void doPull(String image,
-                          String tag,
-                          String registry,
-                          final ProgressMonitor progressMonitor,
-                          URI dockerDaemonUri) throws IOException, InterruptedException {
-        final List<Pair<String, ?>> headers = new ArrayList<>(3);
-        headers.add(Pair.of("Content-Type", MediaType.TEXT_PLAIN));
-        headers.add(Pair.of("Content-Length", 0));
-        headers.add(Pair.of("X-Registry-Auth", initialAuthConfig.getAuthConfigHeader()));
-
-        try (DockerConnection connection = connectionFactory.openConnection(dockerDaemonUri)
-                                                            .method("POST")
-                                                            .path("/images/create")
-                                                            .query("fromImage", registry != null ? registry + "/" + image : image)
-                                                            .headers(headers)) {
-            if (tag != null) {
-                connection.query("tag", tag);
-            }
-            final DockerResponse response = connection.request();
-            final int status = response.getStatus();
-            if (OK.getStatusCode() != status) {
-                throw getDockerException(response);
-            }
-            try (InputStream responseStream = response.getInputStream()) {
-                JsonMessageReader<ProgressStatus> progressReader = new JsonMessageReader<>(responseStream, ProgressStatus.class);
-
-                final ValueHolder<IOException> errorHolder = new ValueHolder<>();
-                // Here do some trick to be able interrupt pull process. Basically for now it is not possible interrupt docker daemon while
-                // it's pulling images but here we need just be able to close connection to the unix socket. Thread is blocking while read
-                // from the socket stream so need one more thread that is able to close socket. In this way we can release thread that is
-                // blocking on i/o.
-                final Runnable runnable = new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            ProgressStatus progressStatus;
-                            while ((progressStatus = progressReader.next()) != null) {
-                                progressMonitor.updateProgress(progressStatus);
-                            }
-                        } catch (IOException e) {
-                            errorHolder.set(e);
-                        }
-                        synchronized (this) {
-                            notify();
-                        }
-                    }
-                };
-                executor.execute(runnable);
-                // noinspection SynchronizationOnLocalVariableOrMethodParameter
-                synchronized (runnable) {
-                    runnable.wait();
-                }
-                final IOException ioe = errorHolder.get();
-                if (ioe != null) {
-                    throw ioe;
-                }
-            }
-        }
-    }
-
-    protected ContainerCreated doCreateContainer(ContainerConfig containerConfig,
-                                                 String containerName,
-                                                 URI dockerDaemonUri) throws IOException {
-        final List<Pair<String, ?>> headers = new ArrayList<>(2);
-        headers.add(Pair.of("Content-Type", MediaType.APPLICATION_JSON));
-        final String entity = JsonHelper.toJson(containerConfig, FIRST_LETTER_LOWERCASE);
-        headers.add(Pair.of("Content-Length", entity.getBytes().length));
-
-        try (DockerConnection connection = connectionFactory.openConnection(dockerDaemonUri)
-                                                            .method("POST")
-                                                            .path("/containers/create")
-                                                            .headers(headers)
-                                                            .entity(entity)) {
-            if (containerName != null) {
-                connection.query("name", containerName);
-            }
-            final DockerResponse response = connection.request();
-            final int status = response.getStatus();
-            if (CREATED.getStatusCode() != status) {
-                throw getDockerException(response);
-            }
-            return parseResponseStreamAndClose(response.getInputStream(), ContainerCreated.class);
-        } catch (JsonParseException e) {
-            throw new IOException(e.getLocalizedMessage(), e);
-        }
-    }
-
-    protected void doStartContainer(String container,
-                                    HostConfig hostConfig,
-                                    URI dockerDaemonUri) throws IOException {
-        final List<Pair<String, ?>> headers = new ArrayList<>(2);
-        headers.add(Pair.of("Content-Type", MediaType.APPLICATION_JSON));
-        final String entity = hostConfig == null ? "{}" : JsonHelper.toJson(hostConfig, FIRST_LETTER_LOWERCASE);
-        headers.add(Pair.of("Content-Length", entity.getBytes().length));
-
-        try (DockerConnection connection = connectionFactory.openConnection(dockerDaemonUri)
-                                                            .method("POST")
-                                                            .path("/containers/" + container + "/start")
-                                                            .headers(headers)
-                                                            .entity(entity)) {
-            final DockerResponse response = connection.request();
-            final int status = response.getStatus();
-            if (!(NO_CONTENT.getStatusCode() == status || NOT_MODIFIED.getStatusCode() == status)) {
-
-                final DockerException dockerException = getDockerException(response);
-                if (OK.getStatusCode() == status) {
-                    // docker API 1.20 returns 200 with warning message about usage of loopback docker backend
-                    LOG.warn(dockerException.getLocalizedMessage());
-                } else {
-                    throw dockerException;
-                }
-            }
         }
     }
 
