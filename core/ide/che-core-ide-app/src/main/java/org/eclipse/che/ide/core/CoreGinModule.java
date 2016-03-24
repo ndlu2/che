@@ -23,7 +23,6 @@ import com.google.web.bindery.event.shared.SimpleEventBus;
 
 import org.eclipse.che.api.account.gwt.client.AccountServiceClient;
 import org.eclipse.che.api.account.gwt.client.AccountServiceClientImpl;
-import org.eclipse.che.api.analytics.client.logger.AnalyticsEventLogger;
 import org.eclipse.che.api.auth.client.OAuthServiceClient;
 import org.eclipse.che.api.auth.client.OAuthServiceClientImpl;
 import org.eclipse.che.api.factory.gwt.client.FactoryServiceClient;
@@ -34,6 +33,7 @@ import org.eclipse.che.api.machine.gwt.client.MachineServiceClient;
 import org.eclipse.che.api.machine.gwt.client.MachineServiceClientImpl;
 import org.eclipse.che.api.machine.gwt.client.RecipeServiceClient;
 import org.eclipse.che.api.machine.gwt.client.RecipeServiceClientImpl;
+import org.eclipse.che.api.machine.gwt.client.WsAgentUrlProvider;
 import org.eclipse.che.api.project.gwt.client.ProjectImportersServiceClient;
 import org.eclipse.che.api.project.gwt.client.ProjectImportersServiceClientImpl;
 import org.eclipse.che.api.project.gwt.client.ProjectServiceClient;
@@ -54,8 +54,6 @@ import org.eclipse.che.ide.Resources;
 import org.eclipse.che.ide.actions.ActionManagerImpl;
 import org.eclipse.che.ide.actions.find.FindActionView;
 import org.eclipse.che.ide.actions.find.FindActionViewImpl;
-import org.eclipse.che.ide.analytics.AnalyticsEventLoggerExt;
-import org.eclipse.che.ide.analytics.DummyAnalyticsLoger;
 import org.eclipse.che.ide.api.action.ActionManager;
 import org.eclipse.che.ide.api.app.AppContext;
 import org.eclipse.che.ide.api.component.Component;
@@ -269,9 +267,6 @@ public class CoreGinModule extends AbstractGinModule {
         bind(ThemeAgent.class).to(ThemeAgentImpl.class).in(Singleton.class);
         bind(FileTypeRegistry.class).to(FileTypeRegistryImpl.class).in(Singleton.class);
 
-        bind(AnalyticsEventLogger.class).to(DummyAnalyticsLoger.class).in(Singleton.class);
-        bind(AnalyticsEventLoggerExt.class).to(DummyAnalyticsLoger.class).in(Singleton.class);
-
         GinMultibinder.newSetBinder(binder(), OAuth2Authenticator.class).addBinding().to(DefaultOAuthAuthenticatorImpl.class);
 
         configureComponents();
@@ -427,6 +422,8 @@ public class CoreGinModule extends AbstractGinModule {
 
         bind(RecentFileList.class).to(RecentFileStore.class).in(Singleton.class);
         install(new GinFactoryModuleBuilder().build(RecentFileActionFactory.class));
+
+        bind(WsAgentUrlProvider.class).to(WsAgentURLProviderImpl.class).in(Singleton.class);
     }
 
     /** Configures binding for Editor API */
@@ -469,10 +466,10 @@ public class CoreGinModule extends AbstractGinModule {
         return partAgentPresenter.getPartStackHandler();
     }
 
+    @Named("ws.agent.path")
     @Provides
-    @Named("cheExtensionPath")
     @Singleton
-    protected String getJavaCAPath() {
-        return Config.getCheExtensionPath();
+    public String wsAgentPath() {
+        return Config.getWsAgentPath();
     }
 }

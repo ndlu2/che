@@ -12,9 +12,8 @@ package org.eclipse.che.ide.actions;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
-import com.google.inject.name.Named;
 
-import org.eclipse.che.api.analytics.client.logger.AnalyticsEventLogger;
+import org.eclipse.che.api.machine.gwt.client.WsAgentUrlProvider;
 import org.eclipse.che.ide.CoreLocalizationConstant;
 import org.eclipse.che.ide.api.action.Action;
 import org.eclipse.che.ide.api.action.ActionEvent;
@@ -36,30 +35,27 @@ public class DownloadItemAction extends Action {
 
     private final String BASE_URL;
 
-    private final AnalyticsEventLogger     eventLogger;
     private final DownloadContainer        downloadContainer;
     private final ProjectExplorerPresenter projectExplorer;
+    private final WsAgentUrlProvider       urlProvider;
 
     @Inject
-    public DownloadItemAction(@Named("cheExtensionPath") String extPath,
-                              AppContext appContext,
+    public DownloadItemAction(AppContext appContext,
                               CoreLocalizationConstant locale,
-                              AnalyticsEventLogger eventLogger,
                               DownloadContainer downloadContainer,
-                              ProjectExplorerPresenter projectExplorer) {
+                              ProjectExplorerPresenter projectExplorer,
+                              WsAgentUrlProvider urlProvider) {
         super(locale.downloadItemName(), locale.downloadItemDescription());
-        this.eventLogger = eventLogger;
         this.downloadContainer = downloadContainer;
         this.projectExplorer = projectExplorer;
+        this.urlProvider = urlProvider;
 
-        BASE_URL = extPath + "/project/" + appContext.getWorkspace().getId() + "/export/";
+        BASE_URL = "/project/" + appContext.getWorkspace().getId() + "/export/";
     }
 
     /** {@inheritDoc} */
     @Override
     public void actionPerformed(ActionEvent e) {
-        eventLogger.log(this);
-
         Selection<?> selection = projectExplorer.getSelection();
         if (selection.isEmpty() || selection.getAllElements().size() > 1) {
             return;
@@ -94,9 +90,9 @@ public class DownloadItemAction extends Action {
         String path = normalizePath(node.getStorablePath());
 
         if (node instanceof FileReferenceNode) {
-            return BASE_URL + "file/" + path;
+            return urlProvider.get() + BASE_URL + "file/" + path;
         }
-        return BASE_URL + path;
+        return urlProvider.get() + BASE_URL + path;
     }
 
     private String normalizePath(String path) {
