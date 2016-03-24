@@ -27,6 +27,7 @@ import org.eclipse.che.api.core.notification.EventService;
 import org.eclipse.che.api.machine.server.MachineManager;
 import org.eclipse.che.api.machine.server.impl.SnapshotImpl;
 import org.eclipse.che.api.machine.server.model.impl.MachineImpl;
+import org.eclipse.che.api.user.server.dao.UserManager;
 import org.eclipse.che.api.workspace.server.model.impl.RuntimeWorkspaceImpl;
 import org.eclipse.che.api.workspace.server.model.impl.UsersWorkspaceImpl;
 import org.eclipse.che.api.workspace.server.spi.WorkspaceDao;
@@ -74,6 +75,7 @@ public class WorkspaceManager {
     private final EventService             eventService;
     private final ExecutorService          executor;
     private final MachineManager           machineManager;
+    private final UserManager              userManager;
 
     private WorkspaceHooks hooks = new NoopWorkspaceHooks();
 
@@ -82,12 +84,14 @@ public class WorkspaceManager {
                             RuntimeWorkspaceRegistry workspaceRegistry,
                             WorkspaceConfigValidator workspaceConfigValidator,
                             EventService eventService,
-                            MachineManager machineManager) {
+                            MachineManager machineManager,
+                            UserManager userManager) {
         this.workspaceDao = workspaceDao;
         this.workspaceRegistry = workspaceRegistry;
         this.configValidator = workspaceConfigValidator;
         this.eventService = eventService;
         this.machineManager = machineManager;
+        this.userManager = userManager;
 
         executor = Executors.newCachedThreadPool(new ThreadFactoryBuilder().setNameFormat("WorkspaceManager-%d")
                                                                            .setDaemon(true)
@@ -145,13 +149,21 @@ public class WorkspaceManager {
     }
 
     /**
-     * Gets workspace by its id.
+     * Gets workspace by composite key.
+     *
+     * <p> Key rules:
+     *
+     * <p> If it doesn't contain <pre>:</pre> character then that key is id(e.g. workspace123456)
+     * If it contains <pre>:</pre> character then that key is combination of user name and workspace name
+     * <pre>:workspace_name<pre> is valid abstract key (e.g. che won't have user concept)
+     * <pre>user_name:<pre> is not valid abstract key
+     *
      *
      * <p>Returned instance always permanent(non-temporary), contains websocket channels
      * and with either {@link WorkspaceStatus#STOPPED} status or status defined by its runtime(if exists).
      *
-     * @param workspaceId
-     *         workspace id
+     * @param key
+     *         composite key
      * @return the workspace instance
      * @throws BadRequestException
      *         when {@code workspaceId} is null
@@ -160,30 +172,9 @@ public class WorkspaceManager {
      * @throws ServerException
      *         when any server error occurs
      */
-    public UsersWorkspaceImpl getWorkspace(String workspaceId) throws NotFoundException, ServerException, BadRequestException {
-        requiredNotNull(workspaceId, "Required non-null workspace id");
-        return normalizeState(workspaceDao.get(workspaceId));
-    }
-
-    /**
-     * Gets workspace by name and owner.
-     *
-     * <p>Returned instance always permanent(non-temporary), contains websocket channels
-     * and with either {@link WorkspaceStatus#STOPPED} status or status defined by its runtime(if exists).
-     *
-     * @param name
-     *         the name of the workspace
-     * @param owner
-     *         the owner of the workspace
-     * @return the workspace instance
-     * @throws BadRequestException
-     * @throws NotFoundException
-     * @throws ServerException
-     */
-    public UsersWorkspaceImpl getWorkspace(String name, String owner) throws BadRequestException, NotFoundException, ServerException {
-        requiredNotNull(name, "Required non-null workspace name");
-        requiredNotNull(owner, "Required non-null workspace owner");
-        return normalizeState(workspaceDao.get(name, owner));
+    public UsersWorkspaceImpl getWorkspace(String key) throws NotFoundException, ServerException, BadRequestException {
+        requiredNotNull(key, "Required non-null workspace key");
+        return normalizeState(getByKey(key));
     }
 
     /**
@@ -692,6 +683,34 @@ public class WorkspaceManager {
     private void requiredNotNull(Object object, String message) throws BadRequestException {
         if (object == null) {
             throw new BadRequestException(message);
+        }
+    }
+
+
+    private UsersWorkspaceImpl getByKey(String key) throws BadRequestException, NotFoundException, ServerException {
+        String[] parts = key.split(":", -1); // -1 is to prevent skipping trailing part
+        switch (parts.length) {
+            case 1: {
+                return workspaceDao.get(key);
+            }
+            case 2: {
+                String userName = parts[0];
+                String wsName = parts[1];
+                if (wsName.isEmpty()) {
+                    throw new BadRequestException("Wrong composite key format - workspace name required to be set.");
+                }
+
+                String ownerId;
+                if (userName.isEmpty()) {
+                    ownerId = getCurrentUserId();
+                } else {
+                    ownerId = userManager.getByName(userName).getId();
+                }
+                return workspaceDao.get(wsName, ownerId);
+            }
+            default: {
+                throw new BadRequestException(format("Wrong composite key format: %s", key));
+            }
         }
     }
 

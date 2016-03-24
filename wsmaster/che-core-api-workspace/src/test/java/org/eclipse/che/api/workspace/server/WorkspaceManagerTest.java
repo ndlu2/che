@@ -22,6 +22,7 @@ import org.eclipse.che.api.machine.server.impl.SnapshotImpl;
 import org.eclipse.che.api.machine.shared.dto.MachineConfigDto;
 import org.eclipse.che.api.machine.shared.dto.MachineSourceDto;
 import org.eclipse.che.api.machine.shared.dto.ServerConfDto;
+import org.eclipse.che.api.user.server.dao.UserManager;
 import org.eclipse.che.api.workspace.server.model.impl.RuntimeWorkspaceImpl;
 import org.eclipse.che.api.workspace.server.model.impl.UsersWorkspaceImpl;
 import org.eclipse.che.api.workspace.server.spi.WorkspaceDao;
@@ -84,6 +85,8 @@ public class WorkspaceManagerTest {
     @Mock
     private MachineManager                     client;
     @Mock
+    private UserManager                        userManager;
+    @Mock
     private WorkspaceHooks                     workspaceHooks;
     @Mock
     private MachineManager                     machineManager;
@@ -96,7 +99,8 @@ public class WorkspaceManagerTest {
 
     @BeforeMethod
     public void setUp() throws Exception {
-        workspaceManager = spy(new WorkspaceManager(workspaceDao, registry, workspaceConfigValidator, eventService, machineManager));
+        workspaceManager =
+                spy(new WorkspaceManager(workspaceDao, registry, workspaceConfigValidator, eventService, machineManager, userManager));
         workspaceManager.setHooks(workspaceHooks);
 
         when(workspaceDao.create(any(UsersWorkspaceImpl.class))).thenAnswer(invocation -> invocation.getArguments()[0]);

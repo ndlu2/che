@@ -154,7 +154,7 @@ public class WorkspaceService extends Service {
     }
 
     @GET
-    @Path("/{id}")
+    @Path("/{key}")
     @Produces(APPLICATION_JSON)
     @RolesAllowed("user")
     @ApiOperation(value = "Get the workspace by the id",
@@ -163,30 +163,13 @@ public class WorkspaceService extends Service {
                    @ApiResponse(code = 404, message = "The workspace with specified id does not exist"),
                    @ApiResponse(code = 403, message = "The user is not workspace owner"),
                    @ApiResponse(code = 500, message = "Internal server error occurred")})
-    public UsersWorkspaceDto getById(@ApiParam("Workspace ID") @PathParam("id") String id) throws NotFoundException,
+    public UsersWorkspaceDto getById(@ApiParam("Workspace ID") @PathParam("key") String key) throws NotFoundException,
                                                                                                   ServerException,
                                                                                                   ForbiddenException,
                                                                                                   BadRequestException {
-        final UsersWorkspaceImpl workspace = workspaceManager.getWorkspace(id);
+        final UsersWorkspaceImpl workspace = workspaceManager.getWorkspace(key);
         ensureUserIsWorkspaceOwner(workspace);
         return injectLinks(asDto(workspace));
-    }
-
-    @GET
-    @Path("/name/{name}")
-    @RolesAllowed("user")
-    @Produces(APPLICATION_JSON)
-    @ApiOperation(value = "Get the workspace by the name from the workspaces owned by the current user",
-                  notes = "This operation can be performed only by the authorized user")
-    @ApiResponses({@ApiResponse(code = 200, message = "The response contains requested workspace entity"),
-                   @ApiResponse(code = 404, message = "The workspace with specified name does not exist for current user "),
-                   @ApiResponse(code = 403, message = "The user is not the workspace owner"),
-                   @ApiResponse(code = 500, message = "Internal server error occurred")})
-    public UsersWorkspaceDto getByName(@ApiParam("The workspace name") @PathParam("name") String name) throws ServerException,
-                                                                                                              BadRequestException,
-                                                                                                              NotFoundException,
-                                                                                                              ForbiddenException {
-        return injectLinks(asDto(workspaceManager.getWorkspace(name, getCurrentUserId())));
     }
 
     @GET
