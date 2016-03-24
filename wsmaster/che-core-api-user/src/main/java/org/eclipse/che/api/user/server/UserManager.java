@@ -184,6 +184,7 @@ public class UserManager {
         for (char passwordChar : password.toCharArray()) {
             if (Character.isDigit(passwordChar)) {
                 numOfDigits++;
+                continue;
             }
             if (Character.isLetter(passwordChar)) {
                 numOfLetters++;

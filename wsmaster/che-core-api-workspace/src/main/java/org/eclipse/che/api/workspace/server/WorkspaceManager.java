@@ -707,7 +707,10 @@ public class WorkspaceManager {
         }
     }
 
-
+    /*
+    * Get workspace using composite key.
+    *
+    */
     private UsersWorkspaceImpl getByKey(String key) throws BadRequestException, NotFoundException, ServerException {
         String[] parts = key.split(":", -1); // -1 is to prevent skipping trailing part
         switch (parts.length) {
