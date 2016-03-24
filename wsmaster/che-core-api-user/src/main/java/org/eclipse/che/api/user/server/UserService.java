@@ -32,7 +32,6 @@ import org.eclipse.che.api.core.rest.annotations.Description;
 import org.eclipse.che.api.core.rest.annotations.GenerateLink;
 import org.eclipse.che.api.core.rest.annotations.Required;
 import org.eclipse.che.api.user.server.dao.User;
-import org.eclipse.che.api.user.server.dao.UserManager;
 import org.eclipse.che.api.user.shared.dto.UserDescriptor;
 import org.eclipse.che.api.user.shared.dto.UserInRoleDescriptor;
 import org.eclipse.che.commons.env.EnvironmentContext;

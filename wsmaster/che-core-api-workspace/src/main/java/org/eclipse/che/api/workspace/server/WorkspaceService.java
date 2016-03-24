@@ -157,13 +157,12 @@ public class WorkspaceService extends Service {
     @Path("/{key}")
     @Produces(APPLICATION_JSON)
     @RolesAllowed("user")
-    @ApiOperation(value = "Get the workspace by the id",
-                  notes = "This operation can be performed only by the workspace owner")
+    @ApiOperation(value = "Get the workspace by the composite key")
     @ApiResponses({@ApiResponse(code = 200, message = "The response contains requested workspace entity"),
-                   @ApiResponse(code = 404, message = "The workspace with specified id does not exist"),
+                   @ApiResponse(code = 404, message = "The workspace by specified key does not exist"),
                    @ApiResponse(code = 403, message = "The user is not workspace owner"),
                    @ApiResponse(code = 500, message = "Internal server error occurred")})
-    public UsersWorkspaceDto getById(@ApiParam("Workspace ID") @PathParam("key") String key) throws NotFoundException,
+    public UsersWorkspaceDto getById(@ApiParam("Composite key") @PathParam("key") String key) throws NotFoundException,
                                                                                                   ServerException,
                                                                                                   ForbiddenException,
                                                                                                   BadRequestException {

@@ -27,7 +27,7 @@ import org.eclipse.che.api.core.notification.EventService;
 import org.eclipse.che.api.machine.server.MachineManager;
 import org.eclipse.che.api.machine.server.impl.SnapshotImpl;
 import org.eclipse.che.api.machine.server.model.impl.MachineImpl;
-import org.eclipse.che.api.user.server.dao.UserManager;
+import org.eclipse.che.api.user.server.UserManager;
 import org.eclipse.che.api.workspace.server.model.impl.RuntimeWorkspaceImpl;
 import org.eclipse.che.api.workspace.server.model.impl.UsersWorkspaceImpl;
 import org.eclipse.che.api.workspace.server.spi.WorkspaceDao;
@@ -152,12 +152,12 @@ public class WorkspaceManager {
      * Gets workspace by composite key.
      *
      * <p> Key rules:
-     *
-     * <p> If it doesn't contain <pre>:</pre> character then that key is id(e.g. workspace123456)
-     * If it contains <pre>:</pre> character then that key is combination of user name and workspace name
-     * <pre>:workspace_name<pre> is valid abstract key (e.g. che won't have user concept)
-     * <pre>user_name:<pre> is not valid abstract key
-     *
+     * <ul>
+     * <li>If it doesn't contain <b>:</b> character then that key is id(e.g. workspace123456)
+     * <li>If it contains <b>:</b> character then that key is combination of user name and workspace name
+     * <li><b></>:workspace_name</b> is valid abstract key (e.g. che won't have user concept)
+     * <li><b>user_name:</b> is not valid abstract key
+     * </ul>
      *
      * <p>Returned instance always permanent(non-temporary), contains websocket channels
      * and with either {@link WorkspaceStatus#STOPPED} status or status defined by its runtime(if exists).
@@ -175,6 +175,27 @@ public class WorkspaceManager {
     public UsersWorkspaceImpl getWorkspace(String key) throws NotFoundException, ServerException, BadRequestException {
         requiredNotNull(key, "Required non-null workspace key");
         return normalizeState(getByKey(key));
+    }
+
+
+    /**
+     * Gets workspace by name and owner. Deprecated. Use getWorkspace(String key) intstead.
+     *
+     * <p>Returned instance always permanent(non-temporary), contains websocket channels
+     * and with either {@link WorkspaceStatus#STOPPED} status or status defined by its runtime(if exists).
+     *
+     * @param name
+     *         the name of the workspace
+     * @param owner
+     *         the owner of the workspace
+     * @return the workspace instance
+     * @throws BadRequestException
+     * @throws NotFoundException
+     * @throws ServerException
+     */
+    @Deprecated
+    public UsersWorkspaceImpl getWorkspace(String name, String owner) throws BadRequestException, NotFoundException, ServerException {
+        return normalizeState(getByKey(":" + name));
     }
 
     /**
