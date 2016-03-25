@@ -193,8 +193,7 @@ public class WorkspaceManagerTest {
         when(workspaceDao.get(workspace.getConfig().getName(), workspace.getOwner())).thenReturn(workspace);
         when(registry.get(any())).thenThrow(new NotFoundException(""));
 
-        final UsersWorkspaceImpl result = workspaceManager.getWorkspace(workspace.getOwner() + ":");
-        assertEquals(result, workspace);
+        workspaceManager.getWorkspace(workspace.getOwner() + ":");
     }
 
     @Test
