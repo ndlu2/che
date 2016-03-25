@@ -155,7 +155,7 @@ public class WorkspaceManager {
      * <ul>
      * <li>If it doesn't contain <b>:</b> character then that key is id(e.g. workspace123456)
      * <li>If it contains <b>:</b> character then that key is combination of user name and workspace name
-     * <li><b></>:workspace_name</b> is valid abstract key (e.g. che won't have user concept)
+     * <li><b></>:workspace_name</b> is valid abstract key and user will be detected from Environment.
      * <li><b>user_name:</b> is not valid abstract key
      * </ul>
      *
@@ -179,7 +179,7 @@ public class WorkspaceManager {
 
 
     /**
-     * Gets workspace by name and owner. Deprecated. Use getWorkspace(String key) intstead.
+     * Gets workspace by name and owner.
      *
      * <p>Returned instance always permanent(non-temporary), contains websocket channels
      * and with either {@link WorkspaceStatus#STOPPED} status or status defined by its runtime(if exists).
@@ -192,6 +192,8 @@ public class WorkspaceManager {
      * @throws BadRequestException
      * @throws NotFoundException
      * @throws ServerException
+     *
+     * @deprecated use {@link #getWorkspace(String key)}
      */
     @Deprecated
     public UsersWorkspaceImpl getWorkspace(String name, String owner) throws BadRequestException, NotFoundException, ServerException {
