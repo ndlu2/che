@@ -157,7 +157,9 @@ public class WorkspaceService extends Service {
     @Path("/{key}")
     @Produces(APPLICATION_JSON)
     @RolesAllowed("user")
-    @ApiOperation(value = "Get the workspace by the composite key")
+    @ApiOperation(value = "Get the workspace by the composite key",
+                  notes = "Composite key can be just workspace ID or in the " +
+                          "username:workspace_name form, where username is optional (e.g :workspace_name is valid key too.")
     @ApiResponses({@ApiResponse(code = 200, message = "The response contains requested workspace entity"),
                    @ApiResponse(code = 404, message = "The workspace by specified key does not exist"),
                    @ApiResponse(code = 403, message = "The user is not workspace owner"),
