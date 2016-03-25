@@ -166,6 +166,38 @@ public class WorkspaceManagerTest {
     }
 
     @Test
+    public void shouldBeAbleToGetWorkspaceByKey() throws Exception {
+        final UsersWorkspaceImpl workspace = workspaceManager.createWorkspace(createConfig(), "user123", "account");
+        when(workspaceDao.get(workspace.getConfig().getName(), workspace.getOwner())).thenReturn(workspace);
+        when(registry.get(any())).thenThrow(new NotFoundException(""));
+        when(userManager.getByName(anyString())).thenReturn(new org.eclipse.che.api.user.server.dao.User().withId(workspace.getOwner()));
+
+        final UsersWorkspaceImpl result = workspaceManager.getWorkspace(workspace.getOwner() + ":" + workspace.getConfig().getName());
+        assertEquals(result, workspace);
+    }
+
+    @Test
+    public void shouldBeAbleToGetWorkspaceByKeyWithoutOwner() throws Exception {
+        final UsersWorkspaceImpl workspace = workspaceManager.createWorkspace(createConfig(), "user123", "account");
+        when(workspaceDao.get(workspace.getConfig().getName(), workspace.getOwner())).thenReturn(workspace);
+        when(registry.get(any())).thenThrow(new NotFoundException(""));
+
+        final UsersWorkspaceImpl result = workspaceManager.getWorkspace(":" + workspace.getConfig().getName());
+        assertEquals(result, workspace);
+    }
+
+
+    @Test(expectedExceptions = BadRequestException.class)
+    public void shouldNotBeAbleToGetWorkspaceByKeyWithoutWSName() throws Exception {
+        final UsersWorkspaceImpl workspace = workspaceManager.createWorkspace(createConfig(), "user123", "account");
+        when(workspaceDao.get(workspace.getConfig().getName(), workspace.getOwner())).thenReturn(workspace);
+        when(registry.get(any())).thenThrow(new NotFoundException(""));
+
+        final UsersWorkspaceImpl result = workspaceManager.getWorkspace(workspace.getOwner() + ":");
+        assertEquals(result, workspace);
+    }
+
+    @Test
     public void getWorkspaceByNameShouldReturnWorkspaceWithStatusEqualToItsRuntimeStatus() throws Exception {
         final UsersWorkspaceImpl workspace = workspaceManager.createWorkspace(createConfig(), "user123", "account");
         when(workspaceDao.get(workspace.getConfig().getName(), workspace.getOwner())).thenReturn(workspace);
