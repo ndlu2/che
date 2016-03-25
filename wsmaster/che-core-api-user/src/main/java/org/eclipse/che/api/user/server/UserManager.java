@@ -19,6 +19,8 @@ import org.eclipse.che.api.user.server.dao.Profile;
 import org.eclipse.che.api.user.server.dao.User;
 import org.eclipse.che.api.user.server.dao.UserDao;
 import org.eclipse.che.api.user.server.dao.UserProfileDao;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
 
@@ -26,6 +28,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
+import static java.lang.String.format;
 import static org.eclipse.che.api.user.server.Constants.ID_LENGTH;
 import static org.eclipse.che.api.user.server.Constants.PASSWORD_LENGTH;
 import static org.eclipse.che.commons.lang.NameGenerator.generate;
@@ -36,6 +39,9 @@ import static org.eclipse.che.commons.lang.NameGenerator.generate;
  * @author Max Shaposhnik (mshaposhnik@codenvy.com)
  */
 public class UserManager {
+
+
+    private static final Logger LOG = LoggerFactory.getLogger(UserManager.class);
 
     private final UserDao        userDao;
     private final UserProfileDao profileDao;
@@ -59,10 +65,12 @@ public class UserManager {
      *         - POJO representation of user entity
      * @throws ConflictException
      *         when given user cannot be created
-     * @throws ServerException
+     @throws BadRequestException
+      *         when password is not valid
+      * @throws ServerException
      *         when any other error occurs
      */
-    public void create(User user, boolean isTemporary) throws ConflictException, ServerException, BadRequestException, NotFoundException {
+    public void create(User user, boolean isTemporary) throws ConflictException, ServerException, BadRequestException {
         user.withId(generate("user", ID_LENGTH))
             .withPassword(firstNonNull(user.getPassword(), generate("", PASSWORD_LENGTH)));
         checkPassword(user.getPassword());
@@ -73,7 +81,11 @@ public class UserManager {
         final Map<String, String> preferences = new HashMap<>(4);
         preferences.put("temporary", Boolean.toString(isTemporary));
         preferences.put("codenvy:created", Long.toString(System.currentTimeMillis()));
-        preferenceDao.setPreferences(user.getId(), preferences);
+        try {
+            preferenceDao.setPreferences(user.getId(), preferences);
+        } catch (NotFoundException e) {
+            LOG.warn(format("Cannot set creation time preferences for user %s.", user.getId()), e);
+        }
     }
 
 
