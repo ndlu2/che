@@ -56,7 +56,7 @@ public class WsAgentLauncherImplTest {
     private static final long       WS_AGENT_PING_DELAY_MS        = 1;
     private static final int        WS_AGENT_PING_CONN_TIMEOUT_MS = 1;
     private static final String     WS_AGENT_SERVER_LOCATION      = "ws-agent.com:456789";
-    private static final String     WS_AGENT_SERVER_URL           = "http://" + WS_AGENT_SERVER_LOCATION;
+    private static final String     WS_AGENT_SERVER_URL           = "http://" + WS_AGENT_SERVER_LOCATION + WS_AGENT_API_ENDPOINT_PATH;
     private static final ServerImpl SERVER                        = new ServerImpl("ref",
                                                                                    "http",
                                                                                    WS_AGENT_SERVER_LOCATION,
@@ -86,8 +86,7 @@ public class WsAgentLauncherImplTest {
                                                   WS_AGENT_MAX_START_TIME_MS,
                                                   WS_AGENT_PING_DELAY_MS,
                                                   WS_AGENT_PING_CONN_TIMEOUT_MS,
-                                                  WS_AGENT_TIMED_OUT_MESSAGE,
-                                                  WS_AGENT_API_ENDPOINT_PATH);
+                                                  WS_AGENT_TIMED_OUT_MESSAGE);
         pingRequest = mock(HttpJsonRequest.class, new SelfReturningAnswer());
         when(machineManager.getDevMachine(WS_ID)).thenReturn(machine);
         when(machine.getId()).thenReturn(MACHINE_ID);

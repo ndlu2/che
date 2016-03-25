@@ -27,7 +27,6 @@ import javax.inject.Named;
 import javax.inject.Provider;
 import javax.inject.Singleton;
 import javax.ws.rs.HttpMethod;
-import javax.ws.rs.core.UriBuilder;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 
@@ -51,7 +50,6 @@ public class WsAgentLauncherImpl implements WsAgentLauncher {
     private final long                     wsAgentMaxStartTimeMs;
     private final long                     wsAgentPingDelayMs;
     private final int                      wsAgentPingConnectionTimeoutMs;
-    private final String                   wsAgentPingPath;
     private final String                   pingTimedOutErrorMessage;
 
     @Inject
@@ -61,8 +59,7 @@ public class WsAgentLauncherImpl implements WsAgentLauncher {
                                @Named("machine.ws_agent.max_start_time_ms") long wsAgentMaxStartTimeMs,
                                @Named("machine.ws_agent.ping_delay_ms") long wsAgentPingDelayMs,
                                @Named("machine.ws_agent.ping_conn_timeout_ms") int wsAgentPingConnectionTimeoutMs,
-                               @Named("machine.ws_agent.ping_timed_out_error_msg") String pingTimedOutErrorMessage,
-                               @Named("machine.ws_agent.agent_api.path") String wsAgentApiPath) {
+                               @Named("machine.ws_agent.ping_timed_out_error_msg") String pingTimedOutErrorMessage) {
         this.machineManagerProvider = machineManagerProvider;
         this.httpJsonRequestFactory = httpJsonRequestFactory;
         this.wsAgentStartCommandLine = wsAgentStartCommandLine;
@@ -70,8 +67,6 @@ public class WsAgentLauncherImpl implements WsAgentLauncher {
         this.wsAgentPingDelayMs = wsAgentPingDelayMs;
         this.wsAgentPingConnectionTimeoutMs = wsAgentPingConnectionTimeoutMs;
         this.pingTimedOutErrorMessage = pingTimedOutErrorMessage;
-        // everrest respond 404 to path to rest without trailing slash
-        this.wsAgentPingPath = wsAgentApiPath;
     }
 
     public static String getWsAgentProcessOutputChannel(String workspaceId) {
@@ -108,13 +103,14 @@ public class WsAgentLauncherImpl implements WsAgentLauncher {
     }
 
     private HttpJsonRequest createPingRequest(Machine devMachine) {
-        final String wsAgentPingUrl = UriBuilder.fromUri(devMachine.getRuntime()
-                                                                   .getServers()
-                                                                   .get(WS_AGENT_PORT)
-                                                                   .getUrl())
-                                                .replacePath(wsAgentPingPath)
-                                                .build()
-                                                .toString();
+        String wsAgentPingUrl = devMachine.getRuntime()
+                                          .getServers()
+                                          .get(WS_AGENT_PORT)
+                                          .getUrl();
+        // everrest respond 404 to path to rest without trailing slash
+        if (!wsAgentPingUrl.endsWith("/")) {
+            wsAgentPingUrl = wsAgentPingUrl + '/';
+        }
         return httpJsonRequestFactory.fromUrl(wsAgentPingUrl)
                                      .setMethod(HttpMethod.GET)
                                      .setTimeout(wsAgentPingConnectionTimeoutMs);
