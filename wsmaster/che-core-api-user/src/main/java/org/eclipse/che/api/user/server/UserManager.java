@@ -65,9 +65,9 @@ public class UserManager {
      *         - POJO representation of user entity
      * @throws ConflictException
      *         when given user cannot be created
-     @throws BadRequestException
-      *         when password is not valid
-      * @throws ServerException
+     * @throws BadRequestException
+     *         when password is not valid
+     * @throws ServerException
      *         when any other error occurs
      */
     public void create(User user, boolean isTemporary) throws ConflictException, ServerException, BadRequestException {
