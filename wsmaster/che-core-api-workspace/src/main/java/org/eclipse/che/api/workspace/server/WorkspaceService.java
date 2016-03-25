@@ -162,7 +162,7 @@ public class WorkspaceService extends Service {
                    @ApiResponse(code = 404, message = "The workspace by specified key does not exist"),
                    @ApiResponse(code = 403, message = "The user is not workspace owner"),
                    @ApiResponse(code = 500, message = "Internal server error occurred")})
-    public UsersWorkspaceDto getById(@ApiParam("Composite key") @PathParam("key") String key) throws NotFoundException,
+    public UsersWorkspaceDto getByKey(@ApiParam("Composite key") @PathParam("key") String key) throws NotFoundException,
                                                                                                   ServerException,
                                                                                                   ForbiddenException,
                                                                                                   BadRequestException {

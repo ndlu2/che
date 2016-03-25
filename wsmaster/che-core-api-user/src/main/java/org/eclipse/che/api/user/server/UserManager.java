@@ -206,6 +206,4 @@ public class UserManager {
             throw new BadRequestException("Password should contain letters and digits");
         }
     }
-
-
 }
