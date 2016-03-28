@@ -21,11 +21,12 @@ export class CheWorkspace {
    * Default constructor that is using resource
    * @ngInject for Dependency injection
    */
-  constructor ($resource, $q, cheUser) {
+  constructor ($resource, $q, cheUser, lodash) {
     // keep resource
     this.$resource = $resource;
 
     this.$q = $q;
+    this.lodash = lodash;
 
     this.cheUser = cheUser;
 
@@ -58,14 +59,13 @@ export class CheWorkspace {
 
   getWorkspaceAgent(workspaceId) {
     let runtimeConfig = this.getRuntimeConfig(workspaceId);
-    let wsAgentUrl;
+    let wsAgentLink;
     if (runtimeConfig) {
-      wsAgentUrl = this.lodash.find(runtimeConfig.links, (link) => {
+      wsAgentLink = this.lodash.find(runtimeConfig.links, (link) => {
         return link.rel === 'wsagent';
       });
     }
-
-    return wsAgentUrl;
+    return wsAgentLink ? wsAgentLink.href.replace('ws://', '') : '';
   }
 
   /**
@@ -318,7 +318,7 @@ export class CheWorkspace {
         wsagentServerAddress = server.address;
       }
     }
-
+    alert()
     let endpoint = runtimeData.devMachine.runtime.envVariables.CHE_API_ENDPOINT;
 
     var contextPath;
