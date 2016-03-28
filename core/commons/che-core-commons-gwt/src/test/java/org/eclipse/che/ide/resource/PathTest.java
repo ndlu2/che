@@ -182,6 +182,7 @@ public class PathTest {
         assertTrue(Path.valueOf("/").isPrefixOf(Path.valueOf("")));
         assertTrue(Path.valueOf("").isPrefixOf(Path.valueOf("/")));
         assertTrue(Path.valueOf("/").isPrefixOf(Path.valueOf("/")));
+	assertTrue(Path.valueOf("/").isPrefixOf(Path.valueOf("foo")));
         assertTrue(Path.valueOf("/").isPrefixOf(Path.valueOf("/foo/a/b/c")));
         assertTrue(Path.valueOf("/foo").isPrefixOf(Path.valueOf("/foo/a/b/c")));
         assertTrue(Path.valueOf("/foo/").isPrefixOf(Path.valueOf("/foo/a/b/c")));
