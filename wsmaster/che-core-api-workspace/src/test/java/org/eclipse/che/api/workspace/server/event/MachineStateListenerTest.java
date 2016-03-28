@@ -47,45 +47,45 @@ public class MachineStateListenerTest {
     @InjectMocks
     private MachineStateListener listener;
 
-//    @Test
-//    public void workspaceShouldNotBeStoppedWhenStoppedMachineIsNotDev() throws Exception {
-//        when(event.isDev()).thenReturn(false);
-//
-//        listener.onEvent(event);
-//
-//        verify(workspaceManager, never()).stopWorkspace(anyString());
-//    }
-//
-//    @Test
-//    public void workspaceShouldNotBeStoppedWhenStoppedMachineIsNotDestroyed() throws Exception {
-//        when(event.getEventType()).thenReturn(RUNNING);
-//
-//        listener.onEvent(event);
-//
-//        verify(workspaceManager, never()).stopWorkspace(anyString());
-//    }
-//
-//    @Test
-//    public void workspaceShouldNotBeStoppedWhenItIsNotRunning() throws Exception {
-//        when(event.isDev()).thenReturn(true);
-//        when(event.getEventType()).thenReturn(DESTROYED);
-//        when(workspaceManager.getWorkspace(anyString())).thenReturn(workspace);
-//        when(workspace.getStatus()).thenReturn(WorkspaceStatus.STOPPED);
-//
-//        listener.onEvent(event);
-//
-//        verify(workspaceManager, never()).stopWorkspace(anyString());
-//    }
-//
-//    @Test
-//    public void workspaceShouldBeStopped() throws Exception {
-//        when(event.isDev()).thenReturn(true);
-//        when(event.getEventType()).thenReturn(DESTROYED);
-//        when(workspaceManager.getWorkspace(anyString())).thenReturn(workspace);
-//        when(workspace.getStatus()).thenReturn(WorkspaceStatus.RUNNING);
-//
-//        listener.onEvent(event);
-//
-//        verify(workspaceManager).stopWorkspace(anyString());
-//    }
+    @Test
+    public void workspaceShouldNotBeStoppedWhenStoppedMachineIsNotDev() throws Exception {
+        when(event.isDev()).thenReturn(false);
+
+        listener.onEvent(event);
+
+        verify(workspaceManager, never()).stopWorkspace(anyString());
+    }
+
+    @Test
+    public void workspaceShouldNotBeStoppedWhenStoppedMachineIsNotDestroyed() throws Exception {
+        when(event.getEventType()).thenReturn(RUNNING);
+
+        listener.onEvent(event);
+
+        verify(workspaceManager, never()).stopWorkspace(anyString());
+    }
+
+    @Test
+    public void workspaceShouldNotBeStoppedWhenItIsNotRunning() throws Exception {
+        when(event.isDev()).thenReturn(true);
+        when(event.getEventType()).thenReturn(DESTROYED);
+        when(workspaceManager.getWorkspace(anyString())).thenReturn(workspace);
+        when(workspace.getStatus()).thenReturn(WorkspaceStatus.STOPPED);
+
+        listener.onEvent(event);
+
+        verify(workspaceManager, never()).stopWorkspace(anyString());
+    }
+
+    @Test
+    public void workspaceShouldBeStopped() throws Exception {
+        when(event.isDev()).thenReturn(true);
+        when(event.getEventType()).thenReturn(DESTROYED);
+        when(workspaceManager.getWorkspace(anyString())).thenReturn(workspace);
+        when(workspace.getStatus()).thenReturn(WorkspaceStatus.RUNNING);
+
+        listener.onEvent(event);
+
+        verify(workspaceManager).stopWorkspace(anyString());
+    }
 }
