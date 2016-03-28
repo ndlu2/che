@@ -392,6 +392,63 @@ public class UserServiceTest {
         assertEquals(userInRoleDescriptor.getScopeId(), "");
     }
 
+    @Test
+    public void shouldFailUpdatePasswordContainsOnlyLetters() throws Exception {
+        final User user = createUser();
+        final String newPassword = "password";
+        final Map<String, List<String>> headers = new HashMap<>();
+        headers.put(HttpHeaders.CONTENT_TYPE, singletonList(MediaType.APPLICATION_FORM_URLENCODED));
+
+        final ContainerResponse response = launcher.service(HttpMethod.POST,
+                                                            SERVICE_PATH + "/password",
+                                                            BASE_URI,
+                                                            headers,
+                                                            ("password=" + newPassword).getBytes(),
+                                                            null,
+                                                            environmentContext);
+
+        assertEquals(response.getStatus(), BAD_REQUEST.getStatusCode());
+        verify(userManager, never()).update(user.withPassword(newPassword));
+    }
+
+    @Test
+    public void shouldFailUpdatePasswordContainsOnlyDigits() throws Exception {
+        final User user = createUser();
+        final String newPassword = "12345678";
+        final Map<String, List<String>> headers = new HashMap<>();
+        headers.put(HttpHeaders.CONTENT_TYPE, singletonList(MediaType.APPLICATION_FORM_URLENCODED));
+
+        final ContainerResponse response = launcher.service(HttpMethod.POST,
+                                                            SERVICE_PATH + "/password",
+                                                            BASE_URI,
+                                                            headers,
+                                                            ("password=" + newPassword).getBytes(),
+                                                            null,
+                                                            environmentContext);
+
+        assertEquals(response.getStatus(), BAD_REQUEST.getStatusCode());
+        verify(userManager, never()).update(user.withPassword(newPassword));
+    }
+
+    @Test
+    public void shouldFailUpdatePasswordWhichLessEightChar() throws Exception {
+        final User user = createUser();
+        final String newPassword = "abc123";
+        final Map<String, List<String>> headers = new HashMap<>();
+        headers.put(HttpHeaders.CONTENT_TYPE, singletonList(MediaType.APPLICATION_FORM_URLENCODED));
+
+        final ContainerResponse response = launcher.service(HttpMethod.POST,
+                                                            SERVICE_PATH + "/password",
+                                                            BASE_URI,
+                                                            headers,
+                                                            ("password=" + newPassword).getBytes(),
+                                                            null,
+                                                            environmentContext);
+
+        assertEquals(response.getStatus(), BAD_REQUEST.getStatusCode());
+        verify(userManager, never()).update(user.withPassword(newPassword));
+    }
+
 
     /**
      * Check the current user has the temp_user role
