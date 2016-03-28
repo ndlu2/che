@@ -82,11 +82,9 @@ public class UserServiceTest {
     @Mock
     SecurityContext    securityContext;
     @Mock
-    UserManager userManager;
-
+    UserManager        userManager;
 
     UserService userService;
-
 
     ResourceLauncher launcher;
 
@@ -345,54 +343,6 @@ public class UserServiceTest {
     }
 
     @Test
-    public void shouldBeAbleToRemoveUser() throws Exception {
-        final User testUser = createUser();
-
-        final ContainerResponse response = makeRequest(HttpMethod.DELETE, SERVICE_PATH + "/" + testUser.getId(), null);
-
-        assertEquals(response.getStatus(), NO_CONTENT.getStatusCode());
-        verify(userManager).remove(testUser.getId());
-    }
-
-
-    /**
-     * Check we have a valid user which has the 'user' role
-     */
-    @Test
-    public void checkUserWithDefaultScope() throws Exception {
-        when(securityContext.isUserInRole("user")).thenReturn(true);
-
-        final ContainerResponse response = makeRequest(HttpMethod.GET, SERVICE_PATH + "/inrole?role=user", null);
-
-        assertEquals(response.getStatus(), OK.getStatusCode());
-        final UserInRoleDescriptor userInRoleDescriptor = (UserInRoleDescriptor)response.getEntity();
-
-        assertNotNull(userInRoleDescriptor);
-        assertEquals(userInRoleDescriptor.getIsInRole(), true);
-        assertEquals(userInRoleDescriptor.getScope(), "system");
-        assertEquals(userInRoleDescriptor.getScopeId(), "");
-    }
-
-
-    /**
-     * Check we have a valid user which has the 'user' role with 'system' scope
-     */
-    @Test
-    public void checkUserWithSystemScope() throws Exception {
-        when(securityContext.isUserInRole("user")).thenReturn(true);
-
-        final ContainerResponse response = makeRequest(HttpMethod.GET, SERVICE_PATH + "/inrole?role=user&scope=system", null);
-
-        assertEquals(response.getStatus(), OK.getStatusCode());
-        final UserInRoleDescriptor userInRoleDescriptor = (UserInRoleDescriptor)response.getEntity();
-
-        assertNotNull(userInRoleDescriptor);
-        assertEquals(userInRoleDescriptor.getIsInRole(), true);
-        assertEquals(userInRoleDescriptor.getScope(), "system");
-        assertEquals(userInRoleDescriptor.getScopeId(), "");
-    }
-
-    @Test
     public void shouldFailUpdatePasswordContainsOnlyLetters() throws Exception {
         final User user = createUser();
         final String newPassword = "password";
@@ -449,6 +399,53 @@ public class UserServiceTest {
         verify(userManager, never()).update(user.withPassword(newPassword));
     }
 
+    @Test
+    public void shouldBeAbleToRemoveUser() throws Exception {
+        final User testUser = createUser();
+
+        final ContainerResponse response = makeRequest(HttpMethod.DELETE, SERVICE_PATH + "/" + testUser.getId(), null);
+
+        assertEquals(response.getStatus(), NO_CONTENT.getStatusCode());
+        verify(userManager).remove(testUser.getId());
+    }
+
+
+    /**
+     * Check we have a valid user which has the 'user' role
+     */
+    @Test
+    public void checkUserWithDefaultScope() throws Exception {
+        when(securityContext.isUserInRole("user")).thenReturn(true);
+
+        final ContainerResponse response = makeRequest(HttpMethod.GET, SERVICE_PATH + "/inrole?role=user", null);
+
+        assertEquals(response.getStatus(), OK.getStatusCode());
+        final UserInRoleDescriptor userInRoleDescriptor = (UserInRoleDescriptor)response.getEntity();
+
+        assertNotNull(userInRoleDescriptor);
+        assertEquals(userInRoleDescriptor.getIsInRole(), true);
+        assertEquals(userInRoleDescriptor.getScope(), "system");
+        assertEquals(userInRoleDescriptor.getScopeId(), "");
+    }
+
+
+    /**
+     * Check we have a valid user which has the 'user' role with 'system' scope
+     */
+    @Test
+    public void checkUserWithSystemScope() throws Exception {
+        when(securityContext.isUserInRole("user")).thenReturn(true);
+
+        final ContainerResponse response = makeRequest(HttpMethod.GET, SERVICE_PATH + "/inrole?role=user&scope=system", null);
+
+        assertEquals(response.getStatus(), OK.getStatusCode());
+        final UserInRoleDescriptor userInRoleDescriptor = (UserInRoleDescriptor)response.getEntity();
+
+        assertNotNull(userInRoleDescriptor);
+        assertEquals(userInRoleDescriptor.getIsInRole(), true);
+        assertEquals(userInRoleDescriptor.getScope(), "system");
+        assertEquals(userInRoleDescriptor.getScopeId(), "");
+    }
 
     /**
      * Check the current user has the temp_user role
