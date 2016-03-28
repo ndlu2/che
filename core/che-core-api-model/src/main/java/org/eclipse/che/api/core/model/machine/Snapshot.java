@@ -31,7 +31,7 @@ public interface Snapshot {
     /**
      * Id of the user that is owner of the snapshot
      */
-    String getOwner();
+    String getNamespace();
 
     /**
      * Creation date of the snapshot

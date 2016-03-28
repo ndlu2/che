@@ -466,7 +466,7 @@ public class MachineManager {
      *
      * @param machineId
      *         id of machine for saving
-     * @param owner
+     * @param namespace
      *         owner for new snapshot
      * @param description
      *         optional description that should help to understand purpose of new snapshot in future
@@ -476,13 +476,13 @@ public class MachineManager {
      * @throws MachineException
      *         if other error occur
      */
-    public SnapshotImpl save(String machineId, String owner, String description)
+    public SnapshotImpl save(String machineId, String namespace, String description)
             throws NotFoundException, MachineException {
         final Instance machine = getInstance(machineId);
         final SnapshotImpl snapshot = SnapshotImpl.builder()
                                                   .generateId()
                                                   .setType(machine.getConfig().getType())
-                                                  .setOwner(owner)
+                                                  .setNamespace(namespace)
                                                   .setWorkspaceId(machine.getWorkspaceId())
                                                   .setDescription(description)
                                                   .setDev(machine.getConfig().isDev())
@@ -505,8 +505,8 @@ public class MachineManager {
      *
      * @param machineId
      *         id of machine for saving
-     * @param owner
-     *         owner for new snapshot
+     * @param namespace
+     *         snapshot namespace (e.g. owner)
      * @param description
      *         optional description that should help to understand purpose of new snapshot in future
      * @return {@link SnapshotImpl} that will be stored in background
@@ -517,14 +517,14 @@ public class MachineManager {
      * @throws MachineException
      *         if other error occur
      */
-    public SnapshotImpl saveSync(String machineId, String owner, String description) throws MachineException,
+    public SnapshotImpl saveSync(String machineId, String namespace, String description) throws MachineException,
                                                                                             SnapshotException,
                                                                                             NotFoundException {
         final Instance machine = getInstance(machineId);
         final SnapshotImpl snapshot = SnapshotImpl.builder()
                                                   .generateId()
                                                   .setType(machine.getConfig().getType())
-                                                  .setOwner(owner)
+                                                  .setNamespace(namespace)
                                                   .setWorkspaceId(machine.getWorkspaceId())
                                                   .setDescription(description)
                                                   .setDev(machine.getConfig().isDev())

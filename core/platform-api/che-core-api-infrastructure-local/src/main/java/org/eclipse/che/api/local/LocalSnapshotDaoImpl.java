@@ -87,7 +87,7 @@ public class LocalSnapshotDaoImpl implements SnapshotDao {
     public synchronized List<SnapshotImpl> findSnapshots(String owner, String workspaceId) throws SnapshotException {
         return snapshots.values()
                         .stream()
-                        .filter(snapshot -> snapshot.getOwner().equals(owner) && snapshot.getWorkspaceId().equals(workspaceId))
+                        .filter(snapshot -> snapshot.getNamespace().equals(owner) && snapshot.getWorkspaceId().equals(workspaceId))
                         .collect(toList());
     }
 

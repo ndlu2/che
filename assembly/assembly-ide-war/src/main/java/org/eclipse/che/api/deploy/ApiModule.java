@@ -33,7 +33,7 @@ import org.eclipse.che.api.project.server.template.ProjectTemplateService;
 import org.eclipse.che.api.ssh.server.SshService;
 import org.eclipse.che.api.user.server.UserProfileService;
 import org.eclipse.che.api.user.server.UserService;
-import org.eclipse.che.api.workspace.server.WorkspaceConfigValidator;
+import org.eclipse.che.api.workspace.server.WorkspaceValidator;
 import org.eclipse.che.api.workspace.server.WorkspaceService;
 import org.eclipse.che.api.workspace.server.event.MachineStateListener;
 import org.eclipse.che.api.workspace.server.event.WorkspaceMessenger;
@@ -131,7 +131,7 @@ public class ApiModule extends AbstractModule {
 
         install(new org.eclipse.che.plugin.docker.machine.ext.LocalStorageModule());
 
-        bind(WorkspaceConfigValidator.class).to(org.eclipse.che.api.workspace.server.DefaultWorkspaceConfigValidator.class);
+        bind(WorkspaceValidator.class).to(org.eclipse.che.api.workspace.server.DefaultWorkspaceConfigValidator.class);
         bind(MachineStateListener.class).asEagerSingleton();
         bind(org.eclipse.che.api.machine.server.WsAgentLauncher.class).to(org.eclipse.che.api.machine.server.WsAgentLauncherImpl.class);
     }

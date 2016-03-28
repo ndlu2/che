@@ -15,6 +15,7 @@ import org.eclipse.che.api.core.model.machine.Command;
 import org.eclipse.che.api.core.model.machine.MachineConfig;
 import org.eclipse.che.api.core.model.machine.ServerConf;
 import org.eclipse.che.api.core.model.workspace.Environment;
+import org.eclipse.che.api.core.model.workspace.Workspace;
 import org.eclipse.che.api.core.model.workspace.WorkspaceConfig;
 
 import javax.inject.Singleton;
@@ -24,17 +25,30 @@ import java.util.regex.Pattern;
 import static com.google.common.base.Strings.isNullOrEmpty;
 import static java.lang.String.format;
 
+// TODO refactor CHE-718
+
 /**
- * Default implementation of {@link WorkspaceConfigValidator}.
+ * Default implementation of {@link WorkspaceValidator}.
  *
  * @author Yevhenii Voevodin
  */
 @Singleton
-public class DefaultWorkspaceConfigValidator implements WorkspaceConfigValidator {
+public class DefaultWorkspaceConfigValidator implements WorkspaceValidator {
     /* should contain [3, 20] characters, first and last character is letter or digit, available characters {A-Za-z0-9.-_}*/
-    private static final Pattern WS_NAME = Pattern.compile("[a-zA-Z0-9][-_.a-zA-Z0-9]{1,18}[a-zA-Z0-9]");
-    private static final Pattern SERVER_PORT = Pattern.compile("[1-9]+[0-9]*/(?:tcp|udp)");
+    private static final Pattern WS_NAME         = Pattern.compile("[a-zA-Z0-9][-_.a-zA-Z0-9]{1,18}[a-zA-Z0-9]");
+    private static final Pattern SERVER_PORT     = Pattern.compile("[1-9]+[0-9]*/(?:tcp|udp)");
     private static final Pattern SERVER_PROTOCOL = Pattern.compile("[a-z][a-z0-9-+.]*");
+
+    @Override
+    public void validate(Workspace workspace) throws BadRequestException {
+        for (String attributeName : workspace.getAttributes().keySet()) {
+            //attribute name should not be empty and should not start with codenvy
+            checkArgument(attributeName != null && !attributeName.trim().isEmpty() && !attributeName.toLowerCase().startsWith("codenvy"),
+                          "Attribute name '%s' is not valid",
+                          attributeName);
+        }
+        validate(workspace.getConfig());
+    }
 
     /**
      * Checks that workspace configuration is valid.
@@ -59,13 +73,6 @@ public class DefaultWorkspaceConfigValidator implements WorkspaceConfigValidator
                       "latin letters, underscores, dots, dashes and should start and end only with digits, " +
                       "latin letters or underscores");
 
-        //attributes
-        for (String attributeName : config.getAttributes().keySet()) {
-            //attribute name should not be empty and should not start with codenvy
-            checkArgument(attributeName != null && !attributeName.trim().isEmpty() && !attributeName.toLowerCase().startsWith("codenvy"),
-                          "Attribute name '%s' is not valid",
-                          attributeName);
-        }
 
         //environments
         checkArgument(!isNullOrEmpty(config.getDefaultEnv()), "Workspace default environment name required");
