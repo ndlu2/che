@@ -13,13 +13,11 @@ package org.eclipse.che.ide.ext.git.client.compare.changedList;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
-import com.google.gwt.event.logical.shared.ValueChangeEvent;
-import com.google.gwt.event.logical.shared.ValueChangeHandler;
 import com.google.gwt.safehtml.shared.SafeHtmlBuilder;
 import com.google.gwt.uibinder.client.UiBinder;
 import com.google.gwt.uibinder.client.UiField;
 import com.google.gwt.user.client.ui.Button;
-import com.google.gwt.user.client.ui.CheckBox;
+import com.google.gwt.user.client.ui.DockLayoutPanel;
 import com.google.gwt.user.client.ui.HTML;
 import com.google.gwt.user.client.ui.LayoutPanel;
 import com.google.gwt.user.client.ui.Widget;
@@ -31,7 +29,11 @@ import org.eclipse.che.ide.api.project.node.Node;
 import org.eclipse.che.ide.api.project.node.interceptor.NodeInterceptor;
 import org.eclipse.che.ide.ext.git.client.GitLocalizationConstant;
 import org.eclipse.che.ide.ext.git.client.GitResources;
+import org.eclipse.che.ide.ext.git.client.compare.FileStatus.Status;
+import org.eclipse.che.ide.ext.git.client.compare.changedList.ChangedFileNode.ActionPerformedCallBack;
 import org.eclipse.che.ide.project.shared.NodesResources;
+import org.eclipse.che.ide.resource.Path;
+import org.eclipse.che.ide.ui.FontAwesome;
 import org.eclipse.che.ide.ui.smartTree.NodeUniqueKeyProvider;
 import org.eclipse.che.ide.ui.smartTree.Tree;
 import org.eclipse.che.ide.ui.smartTree.NodeLoader;
@@ -56,24 +58,26 @@ import java.util.Map;
  */
 @Singleton
 public class ChangedListViewImpl extends Window implements ChangedListView {
-    interface ChangedListViewImplUiBinder extends UiBinder<Widget, ChangedListViewImpl> {
+    interface ChangedListViewImplUiBinder extends UiBinder<DockLayoutPanel, ChangedListViewImpl> {
     }
 
-    private static ChangedListViewImplUiBinder ourUiBinder = GWT.create(ChangedListViewImplUiBinder.class);
+    private static ChangedListViewImplUiBinder uiBinder = GWT.create(ChangedListViewImplUiBinder.class);
 
     @UiField
     LayoutPanel changedFilesPanel;
     @UiField
-    CheckBox    groupByDirectory;
+    Button      groupByDirectoryListViewButton;
+    @UiField
+    Button      expandCollapseButton;
 
     @UiField(provided = true)
     final GitLocalizationConstant locale;
     @UiField(provided = true)
     final GitResources            res;
 
-    private ActionDelegate      delegate;
-    private Tree                tree;
-    private Button              btnCompare;
+    private ActionDelegate delegate;
+    private Tree           tree;
+    private Button         btnCompare;
 
     private final NodesResources nodesResources;
 
@@ -85,7 +89,7 @@ public class ChangedListViewImpl extends Window implements ChangedListView {
         this.locale = locale;
         this.nodesResources = nodesResources;
 
-        Widget widget = ourUiBinder.createAndBindUi(this);
+        DockLayoutPanel widget = uiBinder.createAndBindUi(this);
 
         this.setTitle(locale.changeListTitle());
         this.setWidget(widget);
@@ -108,23 +112,16 @@ public class ChangedListViewImpl extends Window implements ChangedListView {
             @Override
             public void onSelectionChanged(SelectionChangedEvent event) {
                 List<Node> selection = event.getSelection();
-                if (!selection.isEmpty() && !(selection.get(0) instanceof ChangedFolderNode)) {
-                    delegate.onFileNodeSelected(event.getSelection().get(0));
+                if (!selection.isEmpty()) {
+                    delegate.onNodeNodeSelected(event.getSelection().get(0));
                 } else {
-                    delegate.onFileNodeUnselected();
+                    delegate.onNodeNotSelected();
                 }
             }
         });
         changedFilesPanel.add(tree);
 
         createButtons();
-
-        groupByDirectory.addValueChangeHandler(new ValueChangeHandler<Boolean>() {
-            @Override
-            public void onValueChange(ValueChangeEvent<Boolean> valueChangeEvent) {
-                delegate.onGroupByDirectoryCheckBoxValueChanged();
-            }
-        });
 
         SafeHtmlBuilder shb = new SafeHtmlBuilder();
 
@@ -149,28 +146,51 @@ public class ChangedListViewImpl extends Window implements ChangedListView {
         this.delegate = delegate;
     }
 
-    /** {@inheritDoc} */
     @Override
-    public void setChanges(@NotNull Map<String, String> items) {
+    public void viewChangedFilesAsList(@NotNull Map<String, Status> items) {
         tree.getNodeStorage().clear();
-        if (groupByDirectory.getValue()) {
-            for (Node node : getGroupedNodes(items)) {
-                tree.getNodeStorage().add(node);
-            }
-        } else {
-            for (String file : items.keySet()) {
-                tree.getNodeStorage().add(new ChangedFileNode(file, items.get(file), nodesResources, false) {
-                    @Override
-                    public void actionPerformed() {
-                        delegate.onCompareProvided();
-                    }
-                });
+        for (String file : items.keySet()) {
+            tree.getNodeStorage().add(new ChangedFileNode(file, items.get(file), nodesResources, false, new ActionPerformedCallBack() {
+                @Override
+                public void actionPerformed() {
+                    delegate.onFileNodeDoubleClicked();
+                }
+            }));
+        }
+        if (tree.getSelectionModel().getSelectedNodes() == null) {
+            delegate.onNodeNotSelected();
+        }
+    }
 
-            }
+    @Override
+    public void viewChangedFilesAsTree(@NotNull Map<String, Status> items) {
+        tree.getNodeStorage().clear();
+        for (Node node : getGroupedNodes(items)) {
+            tree.getNodeStorage().add(node);
         }
-        if (this.tree.getSelectionModel().getSelectedNodes() == null) {
-            delegate.onFileNodeUnselected();
+        if (tree.getSelectionModel().getSelectedNodes() == null) {
+            delegate.onNodeNotSelected();
         }
+    }
+
+    @Override
+    public void collapseAllNodes() {
+        tree.collapseAll();
+    }
+
+    @Override
+    public void expandAllNodes() {
+        tree.expandAll();
+    }
+
+    @Override
+    public void setExpandIconToExpandCollapseButton() {
+        expandCollapseButton.getElement().setInnerHTML(FontAwesome.EXPAND);
+    }
+
+    @Override
+    public void setCollapseIconToExpandCollapseButton() {
+        expandCollapseButton.getElement().setInnerHTML(FontAwesome.COMPRESS);
     }
 
     /** {@inheritDoc} */
@@ -191,7 +211,33 @@ public class ChangedListViewImpl extends Window implements ChangedListView {
         btnCompare.setEnabled(enabled);
     }
 
+    @Override
+    public void setEnableExpandCollapseButton(boolean enabled) {
+        expandCollapseButton.setEnabled(enabled);
+    }
+
+    @Override
+    public void setTextToChangeViewModeButton(String text) {
+        groupByDirectoryListViewButton.setText(text);
+    }
+
     private void createButtons() {
+        groupByDirectoryListViewButton.addClickHandler(new ClickHandler() {
+            @Override
+            public void onClick(ClickEvent clickEvent) {
+                delegate.onGroupByDirectoryListViewButtonClicked();
+            }
+        });
+
+        setExpandIconToExpandCollapseButton();
+        expandCollapseButton.setTitle(locale.changeListExpandCollapseAllButtonTitle());
+        expandCollapseButton.addClickHandler(new ClickHandler() {
+            @Override
+            public void onClick(ClickEvent clickEvent) {
+                delegate.onExpandCollapseClicked();
+            }
+        });
+
         Button btnClose = createButton(locale.buttonClose(), "git-compare-btn-close", new ClickHandler() {
             @Override
             public void onClick(ClickEvent event) {
@@ -203,13 +249,13 @@ public class ChangedListViewImpl extends Window implements ChangedListView {
         btnCompare = createButton(locale.buttonCompare(), "git-compare-btn-compare", new ClickHandler() {
             @Override
             public void onClick(ClickEvent event) {
-                delegate.onCompareProvided();
+                delegate.onCompareClicked();
             }
         });
         addButtonToFooter(btnCompare);
     }
 
-    private List<Node> getGroupedNodes(Map<String, String> items) {
+    private List<Node> getGroupedNodes(Map<String, Status> items) {
         List<String> allFiles = new ArrayList<>(items.keySet());
         List<String> allPaths = new ArrayList<>();
         for (String file : allFiles) {
@@ -219,40 +265,55 @@ public class ChangedListViewImpl extends Window implements ChangedListView {
             }
         }
         String commonPath = getCommonPath(allPaths);
+        boolean needToAddCommonFolder = !commonPath.isEmpty() && !allPaths.contains(commonPath);
+        if (needToAddCommonFolder) {
+            allPaths.add(commonPath);
+        }
+        int commonPathDirectoriesAmount = Path.valueOf(commonPath).segmentCount();
+
         Map<String, Node> preparedNodes = new HashMap<>();
         for (int i = getMaxNestedLevel(allFiles); i > 0; i--) {
+
+            //Collect child files of all folders of current nesting level and map them to their folders
             Map<String, List<Node>> currentChildNodes = new HashMap<>();
             for (String file : allFiles) {
-                if (file.split("/").length != i) {
+                Path pathName = Path.valueOf(file);
+                if (pathName.segmentCount() != i) {
                     continue;
                 }
-                String path = file.substring(0, file.lastIndexOf("/"));
-                String name = file.substring(file.lastIndexOf("/") + 1);
-                String pathName = path.isEmpty() ? name : path + "/" + name;
-                Node fileNode = new ChangedFileNode(pathName, items.get(pathName), nodesResources, true) {
+                Node fileNode = new ChangedFileNode(file, items.get(file), nodesResources, true, new ActionPerformedCallBack() {
                     @Override
                     public void actionPerformed() {
-                        delegate.onCompareProvided();
+                        delegate.onFileNodeDoubleClicked();
                     }
-                };
-                if (currentChildNodes.keySet().contains(path)) {
-                    currentChildNodes.get(path).add(fileNode);
+                });
+                String filePath = pathName.removeLastSegments(1).toString();
+                if (currentChildNodes.keySet().contains(filePath)) {
+                    currentChildNodes.get(filePath).add(fileNode);
                 } else {
                     List<Node> listFiles = new ArrayList<>();
                     listFiles.add(fileNode);
-                    currentChildNodes.put(path, listFiles);
+                    currentChildNodes.put(filePath, listFiles);
                 }
             }
-            for (String path : currentChildNodes.keySet()) {
-                Node folder = new ChangedFolderNode(getFolders(allPaths, path), nodesResources);
-                folder.setChildren(currentChildNodes.get(path));
-                preparedNodes.put(path, folder);
+
+            //Set collected files to new folders that they are related to and add them to prepared earlier map
+            if (needToAddCommonFolder && commonPathDirectoriesAmount == i) {
+                preparedNodes.put(commonPath, new ChangedFolderNode(commonPath, nodesResources));
+            } else {
+                for (String path : currentChildNodes.keySet()) {
+                    Node folder = new ChangedFolderNode(getFolders(allPaths, path), nodesResources);
+                    folder.setChildren(currentChildNodes.get(path));
+                    preparedNodes.put(path, folder);
+                }
             }
+
+            //Take all child folders and nest them to related parent folders of current nesting level
             List<String> currentPaths = new ArrayList<>(preparedNodes.keySet());
-            for (String currentPath : currentPaths) {
+            for (String parentPath : currentPaths) {
                 List<Node> nodesToNest = new ArrayList<>();
                 for (String nestedItem : currentPaths) {
-                    if (!currentPath.equals(nestedItem) && nestedItem.startsWith(currentPath)) {
+                    if (!parentPath.equals(nestedItem) && nestedItem.startsWith(parentPath)) {
                         nodesToNest.add(preparedNodes.remove(nestedItem));
                     }
                 }
@@ -260,11 +321,13 @@ public class ChangedListViewImpl extends Window implements ChangedListView {
                     continue;
                 }
                 Collections.sort(nodesToNest, new NameComparator());
-                nodesToNest.addAll(currentChildNodes.get(currentPath));
-                if (currentPath.equals(commonPath)) {
+                if (!needToAddCommonFolder || commonPathDirectoriesAmount != i) {
+                    nodesToNest.addAll(currentChildNodes.get(parentPath));
+                }
+                if (parentPath.isEmpty()) {
                     return nodesToNest;
                 } else {
-                    preparedNodes.get(currentPath).setChildren(nodesToNest);
+                    preparedNodes.get(parentPath).setChildren(nodesToNest);
                 }
             }
         }
@@ -272,12 +335,11 @@ public class ChangedListViewImpl extends Window implements ChangedListView {
     }
 
     private String getFolders(List<String> allPaths, String comparedPath) {
-        String[] segments = comparedPath.split("/");
-        String trimmedPath = comparedPath;
-        for (int i = segments.length; i > 0; i--) {
-            trimmedPath = trimmedPath.replace("/" + segments[i - 1], "");
-            if (allPaths.contains(trimmedPath)) {
-                return comparedPath.replace(trimmedPath + "/", "");
+        Path path = Path.valueOf(comparedPath);
+        int segmentCount = path.segmentCount();
+        for (int i = segmentCount; i > 0; i--) {
+            if (allPaths.contains(path.removeLastSegments(segmentCount - i + 1).toString())) {
+                return path.removeFirstSegments(i - 1).toString();
             }
         }
         return comparedPath;
@@ -286,22 +348,23 @@ public class ChangedListViewImpl extends Window implements ChangedListView {
     private int getMaxNestedLevel(List<String> items) {
         int level = 0;
         for (String item : items) {
-            int currentLevel = item.split("/").length;
+            int currentLevel = Path.valueOf(item).segmentCount();
             level = currentLevel > level ? currentLevel : level;
         }
         return level;
     }
 
     private String getCommonPath(List<String> paths) {
-        String commonPath = "";
-        for (String segment : paths.get(0).split("/")) {
-            commonPath += commonPath.isEmpty() ? segment : "/" + segment;
-            for (String path : paths) {
-                if (!path.startsWith(commonPath)) {
-                    return commonPath.substring(0, commonPath.lastIndexOf("/"));
+        Path commonPath = Path.valueOf(paths.get(0));
+        int segmentCount = commonPath.segmentCount();
+        for (int i = 1; i < segmentCount; i++) {
+            for (String currentPath : paths) {
+                String path = commonPath.removeLastSegments(segmentCount - i).toString();
+                if (!currentPath.startsWith(path)) {
+                    return Path.valueOf(path).removeLastSegments(1).toString();
                 }
             }
         }
-        return commonPath;
+        return commonPath.toString();
     }
 }

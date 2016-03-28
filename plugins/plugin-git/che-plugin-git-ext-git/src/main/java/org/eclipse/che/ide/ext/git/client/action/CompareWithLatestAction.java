@@ -4,9 +4,9 @@
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
- *
+ * <p/>
  * Contributors:
- *   Codenvy, S.A. - initial API and implementation
+ * Codenvy, S.A. - initial API and implementation
  *******************************************************************************/
 package org.eclipse.che.ide.ext.git.client.action;
 
@@ -22,6 +22,8 @@ import org.eclipse.che.ide.api.project.node.HasStorablePath;
 import org.eclipse.che.ide.api.selection.Selection;
 import org.eclipse.che.ide.ext.git.client.GitLocalizationConstant;
 import org.eclipse.che.ide.ext.git.client.compare.ComparePresenter;
+import org.eclipse.che.ide.ext.git.client.compare.FileStatus;
+import org.eclipse.che.ide.ext.git.client.compare.FileStatus.Status;
 import org.eclipse.che.ide.ext.git.client.compare.changedList.ChangedListPresenter;
 import org.eclipse.che.ide.part.explorer.project.ProjectExplorerPresenter;
 import org.eclipse.che.ide.project.node.ResourceBasedNode;
@@ -36,6 +38,7 @@ import java.util.Map;
 
 import static org.eclipse.che.api.git.shared.DiffRequest.DiffType.NAME_STATUS;
 import static org.eclipse.che.ide.api.notification.StatusNotification.Status.FAIL;
+import static org.eclipse.che.ide.ext.git.client.compare.FileStatus.defineStatus;
 
 /**
  * Action for comparing with latest repository version
@@ -104,22 +107,24 @@ public class CompareWithLatestAction extends GitAction {
                                 } else {
                                     String[] changedFiles = result.split("\n");
                                     if (changedFiles.length == 1) {
-                                        comparePresenter.show(changedFiles[0].substring(2), changedFiles[0].substring(0, 1), REVISION);
+                                        comparePresenter.show(changedFiles[0].substring(2),
+                                                              defineStatus(changedFiles[0].substring(0, 1)),
+                                                              REVISION);
                                     } else {
-                                        Map<String, String> items = new HashMap<>();
+                                        Map<String, Status> items = new HashMap<>();
                                         for (String item : changedFiles) {
-                                            items.put(item.substring(2, item.length()), item.substring(0, 1));
+                                            items.put(item.substring(2, item.length()), defineStatus(item.substring(0, 1)));
                                         }
                                         changedListPresenter.show(items, REVISION);
                                     }
                                 }
                             }
 
-            @Override
-            protected void onFailure(Throwable exception) {
-                notificationManager.notify(locale.diffFailed(), FAIL, false);
-            }
-        });
+                            @Override
+                            protected void onFailure(Throwable exception) {
+                                notificationManager.notify(locale.diffFailed(), FAIL, false);
+                            }
+                        });
     }
 
     private Selection<ResourceBasedNode<?>> getExplorerSelection() {

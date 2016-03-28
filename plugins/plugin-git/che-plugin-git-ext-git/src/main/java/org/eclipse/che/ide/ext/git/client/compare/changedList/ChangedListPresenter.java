@@ -14,7 +14,9 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 
 import org.eclipse.che.ide.api.project.node.Node;
+import org.eclipse.che.ide.ext.git.client.GitLocalizationConstant;
 import org.eclipse.che.ide.ext.git.client.compare.ComparePresenter;
+import org.eclipse.che.ide.ext.git.client.compare.FileStatus.Status;
 
 import javax.validation.constraints.NotNull;
 
@@ -27,19 +29,24 @@ import java.util.Map;
  */
 @Singleton
 public class ChangedListPresenter implements ChangedListView.ActionDelegate {
-    private final ChangedListView  view;
-    private final ComparePresenter comparePresenter;
+    private final ChangedListView         view;
+    private final GitLocalizationConstant locale;
+    private final ComparePresenter        comparePresenter;
 
+    private Map<String, Status> changedFiles;
     private String              file;
-    private String              state;
     private String              revision;
-    private Map<String, String> changedFiles;
+    private Status              status;
+    private boolean             treeViewEnabled;
+    private boolean             treeExpanded;
 
     @Inject
     public ChangedListPresenter(ChangedListView view,
-                                ComparePresenter comparePresenter) {
+                                ComparePresenter comparePresenter,
+                                GitLocalizationConstant locale) {
         this.comparePresenter = comparePresenter;
         this.view = view;
+        this.locale = locale;
         this.view.setDelegate(this);
     }
 
@@ -47,14 +54,16 @@ public class ChangedListPresenter implements ChangedListView.ActionDelegate {
      * Show window with changed files list.
      *
      * @param changedFiles
-     *         Map with files and their state
+     *         Map with files and their status
      * @param revision
      *         hash of revision or branch
      */
-    public void show(Map<String, String> changedFiles, String revision) {
+    public void show(Map<String, Status> changedFiles, String revision) {
+        treeExpanded = false;
         this.changedFiles = changedFiles;
         view.showDialog();
-        view.setChanges(changedFiles);
+        viewChangedFiles();
+        view.setEnableExpandCollapseButton(treeViewEnabled);
         view.setEnableCompareButton(false);
         this.revision = revision;
     }
@@ -67,27 +76,64 @@ public class ChangedListPresenter implements ChangedListView.ActionDelegate {
 
     /** {@inheritDoc} */
     @Override
-    public void onCompareProvided() {
-        comparePresenter.show(file, state, revision);
+    public void onCompareClicked() {
+        showCompare();
+    }
+
+    @Override
+    public void onFileNodeDoubleClicked() {
+        showCompare();
     }
 
     /** {@inheritDoc} */
     @Override
-    public void onGroupByDirectoryCheckBoxValueChanged() {
-        view.setChanges(changedFiles);
+    public void onGroupByDirectoryListViewButtonClicked() {
+        treeViewEnabled = !treeViewEnabled;
+        viewChangedFiles();
+        view.setEnableExpandCollapseButton(treeViewEnabled);
+    }
+
+    @Override
+    public void onExpandCollapseClicked() {
+        treeExpanded = !treeExpanded;
+        if (treeExpanded) {
+            view.expandAllNodes();
+            view.setCollapseIconToExpandCollapseButton();
+        } else {
+            view.collapseAllNodes();
+            view.setExpandIconToExpandCollapseButton();
+        }
     }
 
     /** {@inheritDoc} */
     @Override
-    public void onFileNodeSelected(@NotNull Node node) {
+    public void onNodeNodeSelected(@NotNull Node node) {
+        if (node instanceof ChangedFolderNode) {
+            return;
+        }
         view.setEnableCompareButton(true);
         this.file = node.getName();
-        this.state = ((ChangedFileNode)node).getState();
+        this.status = ((ChangedFileNode)node).getStatus();
     }
 
     /** {@inheritDoc} */
     @Override
-    public void onFileNodeUnselected() {
+    public void onNodeNotSelected() {
         view.setEnableCompareButton(false);
+    }
+
+    private void viewChangedFiles() {
+        if (treeViewEnabled) {
+            view.viewChangedFilesAsTree(changedFiles);
+            view.setExpandIconToExpandCollapseButton();
+            view.setTextToChangeViewModeButton(locale.changeListRowListViewButtonText());
+        } else {
+            view.viewChangedFilesAsList(changedFiles);
+            view.setTextToChangeViewModeButton(locale.changeListGroupByDirectoryButtonText());
+        }
+    }
+
+    private void showCompare() {
+        comparePresenter.show(file, status, revision);
     }
 }

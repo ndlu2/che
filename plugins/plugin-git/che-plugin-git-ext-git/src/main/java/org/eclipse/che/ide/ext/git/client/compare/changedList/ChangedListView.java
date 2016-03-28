@@ -12,6 +12,7 @@ package org.eclipse.che.ide.ext.git.client.compare.changedList;
 
 import org.eclipse.che.ide.api.mvp.View;
 import org.eclipse.che.ide.api.project.node.Node;
+import org.eclipse.che.ide.ext.git.client.compare.FileStatus.Status;
 
 import javax.validation.constraints.NotNull;
 import java.util.Map;
@@ -27,11 +28,14 @@ public interface ChangedListView extends View<ChangedListView.ActionDelegate> {
         /** Performs any actions appropriate in response to the user having pressed the 'Close' button. */
         void onCloseClicked();
 
-        /** Performs any actions appropriate in response to the user having provided compare action. */
-        void onCompareProvided();
+        /** Performs any actions appropriate in response to the user having pressed the Compare button. */
+        void onCompareClicked();
 
         /** Performs any actions appropriate in response to the user having changed the 'Group by directory' check-box value. */
-        void onGroupByDirectoryCheckBoxValueChanged();
+        void onGroupByDirectoryListViewButtonClicked();
+
+        /** Performs any actions appropriate in response to the user having changed the 'Group by directory' check-box value. */
+        void onExpandCollapseClicked();
 
         /**
          * Performs any action in response to the user having select file node.
@@ -39,19 +43,32 @@ public interface ChangedListView extends View<ChangedListView.ActionDelegate> {
          * @param node
          *         selected file node
          */
-        void onFileNodeSelected(@NotNull Node node);
+        void onNodeNodeSelected(@NotNull Node node);
 
         /** Performs any action in response to the user do not have any selected file node. */
-        void onFileNodeUnselected();
+        void onNodeNotSelected();
+
+        void onFileNodeDoubleClicked();
     }
 
     /**
+     *
      * Set changed files.
      *
      * @param files
-     *         Map of changed files with their state
+     *         Map of changed files with their status
      */
-    void setChanges(@NotNull Map<String, String> files);
+    void viewChangedFilesAsList(@NotNull Map<String, Status> files);
+
+    void viewChangedFilesAsTree(@NotNull Map<String, Status> files);
+
+    void collapseAllNodes();
+
+    void expandAllNodes();
+
+    void setExpandIconToExpandCollapseButton();
+
+    void setCollapseIconToExpandCollapseButton();
 
     /** Close dialog. */
     void close();
@@ -66,4 +83,8 @@ public interface ChangedListView extends View<ChangedListView.ActionDelegate> {
      *         <code>true</code> to enable the button, <code>false</code> to disable it
      */
     void setEnableCompareButton(boolean enabled);
+
+    void setEnableExpandCollapseButton(boolean enabled);
+
+    void setTextToChangeViewModeButton(String text);
 }

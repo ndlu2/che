@@ -11,8 +11,8 @@
 package org.eclipse.che.ide.ext.git.client.compare.changedList;
 
 import org.eclipse.che.api.promises.client.Promise;
+import org.eclipse.che.api.promises.client.js.Promises;
 import org.eclipse.che.ide.api.project.node.AbstractTreeNode;
-import org.eclipse.che.ide.api.project.node.HasAction;
 import org.eclipse.che.ide.api.project.node.Node;
 import org.eclipse.che.ide.project.shared.NodesResources;
 import org.eclipse.che.ide.ui.smartTree.presentation.HasPresentation;
@@ -26,7 +26,7 @@ import java.util.List;
  *
  * @author Igor Vinokur
  */
-public class ChangedFolderNode extends AbstractTreeNode implements HasPresentation, HasAction {
+public class ChangedFolderNode extends AbstractTreeNode implements HasPresentation {
 
     private String           name;
     private NodePresentation nodePresentation;
@@ -48,7 +48,7 @@ public class ChangedFolderNode extends AbstractTreeNode implements HasPresentati
 
     @Override
     protected Promise<List<Node>> getChildrenImpl() {
-        return this.getChildren(false);
+        return Promises.resolve(children);
     }
 
     @Override
@@ -78,10 +78,5 @@ public class ChangedFolderNode extends AbstractTreeNode implements HasPresentati
             updatePresentation(nodePresentation);
         }
         return nodePresentation;
-    }
-
-    @Override
-    public void actionPerformed() {
-
     }
 }

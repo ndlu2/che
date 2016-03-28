@@ -15,6 +15,7 @@ import org.eclipse.che.api.promises.client.js.Promises;
 import org.eclipse.che.ide.api.project.node.AbstractTreeNode;
 import org.eclipse.che.ide.api.project.node.HasAction;
 import org.eclipse.che.ide.api.project.node.Node;
+import org.eclipse.che.ide.ext.git.client.compare.FileStatus.Status;
 import org.eclipse.che.ide.project.shared.NodesResources;
 import org.eclipse.che.ide.ui.smartTree.presentation.HasPresentation;
 import org.eclipse.che.ide.ui.smartTree.presentation.NodePresentation;
@@ -31,30 +32,46 @@ import java.util.List;
 public class ChangedFileNode extends AbstractTreeNode implements HasPresentation, HasAction {
 
     private String           pathName;
-    private String           state;
+    private Status           status;
     private NodePresentation nodePresentation;
 
-    private final NodesResources nodesResources;
-    private final boolean        viewPath;
+    private final NodesResources          nodesResources;
+    private final boolean                 viewPath;
+    private final ActionPerformedCallBack actionPerformedCallBack;
+
+    /**
+     * CallBack for describing actions that will be performed on node double clicked.
+     */
+    public interface ActionPerformedCallBack {
+        /**
+         * Actions that will be performed on node double clicked.
+         */
+        void actionPerformed();
+    }
 
     /**
      * Create instance of ChangedFileNode.
      *
      * @param pathName
      *         name of the file that represents this node with its full path
-     * @param state
-     *         state of the file that represents this node
+     * @param status
+     *         git status of the file that represents this node
      * @param nodesResources
      *         resources that contain icons
      * @param viewPath
      *         <code>true</code> if it is needed to view file name with its full path,
      *         and <code>false</code> if it is needed to view only name of the file
      */
-    public ChangedFileNode(String pathName, String state, NodesResources nodesResources, boolean viewPath) {
+    public ChangedFileNode(String pathName,
+                           Status status,
+                           NodesResources nodesResources,
+                           boolean viewPath,
+                           ActionPerformedCallBack actionPerformedCallBack) {
         this.pathName = pathName;
-        this.state = state;
+        this.status = status;
         this.nodesResources = nodesResources;
         this.viewPath = viewPath;
+        this.actionPerformedCallBack = actionPerformedCallBack;
     }
 
     @Override
@@ -68,12 +85,12 @@ public class ChangedFileNode extends AbstractTreeNode implements HasPresentation
     }
 
     /**
-     * Represents state of the file, 'A' if added 'D' if deleted 'M' if modified, etc.
+     * Git status of the file.
      *
-     * @return state state of the node
+     * @return Git status of the file
      */
-    public String getState() {
-        return state;
+    public Status getStatus() {
+        return status;
     }
 
     @Override
@@ -88,14 +105,18 @@ public class ChangedFileNode extends AbstractTreeNode implements HasPresentation
         presentation.setPresentableText(viewPath ? name : path.isEmpty() ? name : path + "/" + name);
         presentation.setPresentableIcon(nodesResources.file());
 
-        if (state.startsWith("M")) {
-            presentation.setPresentableTextCss("color: DodgerBlue ;");
-        } else if (state.startsWith("D")) {
-            presentation.setPresentableTextCss("color: red;");
-        } else if (state.startsWith("A")) {
-            presentation.setPresentableTextCss("color: green;");
-        } else if (state.startsWith("C")) {
-            presentation.setPresentableTextCss("color: purple;");
+        switch (status) {
+            case Modified:
+                presentation.setPresentableTextCss("color: DodgerBlue ;");
+                return;
+            case Deleted:
+                presentation.setPresentableTextCss("color: red;");
+                return;
+            case Added:
+                presentation.setPresentableTextCss("color: green;");
+                return;
+            case Copied:
+                presentation.setPresentableTextCss("color: purple;");
         }
     }
 
@@ -114,6 +135,6 @@ public class ChangedFileNode extends AbstractTreeNode implements HasPresentation
 
     @Override
     public void actionPerformed() {
-
+        actionPerformedCallBack.actionPerformed();
     }
 }
