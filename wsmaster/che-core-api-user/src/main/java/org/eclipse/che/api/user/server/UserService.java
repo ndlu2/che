@@ -220,6 +220,9 @@ public class UserService extends Service {
                                                        BadRequestException,
                                                        ServerException,
                                                        ConflictException {
+
+        checkPassword(password);
+
         final User user = userManager.getById(currentUserId());
         user.setPassword(password);
         userManager.update(user);
@@ -439,6 +442,7 @@ public class UserService extends Service {
         final User user = new User().withName(userDescriptor.getName())
                                     .withEmail(userDescriptor.getEmail());
         if (userDescriptor.getPassword() != null) {
+            checkPassword(userDescriptor.getPassword());
             user.setPassword(userDescriptor.getPassword());
         }
         return user;
@@ -451,6 +455,41 @@ public class UserService extends Service {
         return new User().withEmail(tokenValidator.validateToken(token));
     }
 
+    /**
+     * Checks user password conforms some rules:
+     * <ul>
+     * <li> Not null
+     * <li> Must be at least 8 character length
+     * <li> Must contain at least one letter and one digit
+     * </ul>
+     *
+     * @param password
+     *         user's password
+     * @throws BadRequestException
+     *         when password violates any rule
+     */
+    private void checkPassword(String password) throws BadRequestException {
+        if (password == null) {
+            throw new BadRequestException("Password required");
+        }
+        if (password.length() < 8) {
+            throw new BadRequestException("Password should contain at least 8 characters");
+        }
+        int numOfLetters = 0;
+        int numOfDigits = 0;
+        for (char passwordChar : password.toCharArray()) {
+            if (Character.isDigit(passwordChar)) {
+                numOfDigits++;
+                continue;
+            }
+            if (Character.isLetter(passwordChar)) {
+                numOfLetters++;
+            }
+        }
+        if (numOfDigits == 0 || numOfLetters == 0) {
+            throw new BadRequestException("Password should contain letters and digits");
+        }
+    }
 
     private String currentUserId() {
         return EnvironmentContext.getCurrent().getUser().getId();

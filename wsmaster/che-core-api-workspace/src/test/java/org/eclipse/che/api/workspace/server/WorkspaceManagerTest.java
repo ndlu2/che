@@ -187,15 +187,6 @@ public class WorkspaceManagerTest {
     }
 
 
-    @Test(expectedExceptions = BadRequestException.class)
-    public void shouldNotBeAbleToGetWorkspaceByKeyWithoutWSName() throws Exception {
-        final UsersWorkspaceImpl workspace = workspaceManager.createWorkspace(createConfig(), "user123", "account");
-        when(workspaceDao.get(workspace.getConfig().getName(), workspace.getOwner())).thenReturn(workspace);
-        when(registry.get(any())).thenThrow(new NotFoundException(""));
-
-        workspaceManager.getWorkspace(workspace.getOwner() + ":");
-    }
-
     @Test
     public void getWorkspaceByNameShouldReturnWorkspaceWithStatusEqualToItsRuntimeStatus() throws Exception {
         final UsersWorkspaceImpl workspace = workspaceManager.createWorkspace(createConfig(), "user123", "account");

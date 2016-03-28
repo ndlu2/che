@@ -179,6 +179,27 @@ public class WorkspaceManager {
 
 
     /**
+     * Gets workspace by its id.
+     *
+     * <p>Returned instance always permanent(non-temporary), contains websocket channels
+     * and with either {@link WorkspaceStatus#STOPPED} status or status defined by its runtime(if exists).
+     *
+     * @param workspaceId
+     *         workspace id
+     * @return the workspace instance
+     * @throws BadRequestException
+     *         when {@code workspaceId} is null
+     * @throws NotFoundException
+     *         when workspace doesn't exist
+     * @throws ServerException
+     *         when any server error occurs
+     */
+    public UsersWorkspaceImpl getWorkspaceById(String workspaceId) throws NotFoundException, ServerException, BadRequestException {
+        requiredNotNull(workspaceId, "Required non-null workspace id");
+        return normalizeState(workspaceDao.get(workspaceId));
+    }
+
+    /**
      * Gets workspace by name and owner.
      *
      * <p>Returned instance always permanent(non-temporary), contains websocket channels
@@ -192,12 +213,11 @@ public class WorkspaceManager {
      * @throws BadRequestException
      * @throws NotFoundException
      * @throws ServerException
-     *
-     * @deprecated use {@link #getWorkspace(String key)}
      */
-    @Deprecated
     public UsersWorkspaceImpl getWorkspace(String name, String owner) throws BadRequestException, NotFoundException, ServerException {
-        return normalizeState(getByKey(":" + name));
+        requiredNotNull(name, "Required non-null workspace name");
+        requiredNotNull(owner, "Required non-null workspace owner");
+        return normalizeState(workspaceDao.get(name, owner));
     }
 
     /**
@@ -713,19 +733,12 @@ public class WorkspaceManager {
     * Get workspace using composite key.
     *
     */
-    private UsersWorkspaceImpl getByKey(String key) throws BadRequestException, NotFoundException, ServerException {
+    private UsersWorkspaceImpl getByKey(String key) throws NotFoundException, ServerException {
         String[] parts = key.split(":", -1); // -1 is to prevent skipping trailing part
         switch (parts.length) {
-            case 1: {
-                return workspaceDao.get(key);
-            }
             case 2: {
                 String userName = parts[0];
                 String wsName = parts[1];
-                if (wsName.isEmpty()) {
-                    throw new BadRequestException("Wrong composite key format - workspace name required to be set.");
-                }
-
                 String ownerId;
                 if (userName.isEmpty()) {
                     ownerId = getCurrentUserId();
@@ -735,7 +748,7 @@ public class WorkspaceManager {
                 return workspaceDao.get(wsName, ownerId);
             }
             default: {
-                throw new BadRequestException(format("Wrong composite key %s. Format should be 'username:workspace_name'. ", key));
+                return workspaceDao.get(key);
             }
         }
     }

@@ -57,15 +57,6 @@ public class UserManagerTest {
         verify(preferenceDao).setPreferences(anyString(), anyMapOf(String.class, String.class));
     }
 
-    @Test(expectedExceptions = BadRequestException.class)
-    public void shouldThrowForbiddenExceptionWhenCreatingUserWithInvalidPassword() throws Exception {
-        final User user = new User().withEmail("test@email.com").withName("testName").withPassword("password");
-        manager.create(user, false);
-
-        verify(userDao, never()).create(any(User.class));
-        verify(profileDao, never()).create(any(Profile.class));
-    }
-
     @Test
     public void shouldGeneratedPasswordWhenCreatingUserAndItIsMissing() throws Exception {
         final User user = new User().withEmail("test@email.com").withName("testName");
@@ -73,29 +64,4 @@ public class UserManagerTest {
 
         verify(userDao).create(eq(user.withPassword("<none>")));
     }
-
-    @Test(expectedExceptions = BadRequestException.class)
-    public void shouldFailUpdatePasswordContainsOnlyLetters() throws Exception {
-        final User user = new User().withEmail("test@email.com").withName("testName").withPassword("password");
-        manager.update(user);
-
-        verify(userDao, never()).update(eq(user));
-    }
-
-    @Test(expectedExceptions = BadRequestException.class)
-    public void shouldFailUpdatePasswordContainsOnlyDigits() throws Exception {
-        final User user = new User().withEmail("test@email.com").withName("testName").withPassword("12345678");
-        manager.update(user);
-
-        verify(userDao, never()).update(eq(user));
-    }
-
-    @Test(expectedExceptions = BadRequestException.class)
-    public void shouldFailUpdatePasswordWhichLessEightChar() throws Exception {
-        final User user = new User().withEmail("test@email.com").withName("testName").withPassword("123ab");
-        manager.update(user);
-
-        verify(userDao, never()).update(eq(user));
-    }
-
 }

@@ -243,6 +243,21 @@ public class UserServiceTest {
     }
 
     @Test
+    public void shouldThrowForbiddenExceptionWhenCreatingUserWithInvalidPassword() throws Exception {
+        final UserDescriptor newUser = DtoFactory.getInstance()
+                                                 .createDto(UserDescriptor.class)
+                                                 .withName("test")
+                                                 .withPassword("password");
+        when(securityContext.isUserInRole("system/admin")).thenReturn(true);
+
+        final ContainerResponse response = makeRequest(HttpMethod.POST, SERVICE_PATH + "/create", newUser);
+
+        assertEquals(response.getStatus(), BAD_REQUEST.getStatusCode());
+        verify(userManager, never()).create(any(User.class), anyBoolean());
+    }
+
+
+    @Test
     public void shouldThrowUnauthorizedExceptionWhenCreatingUserBasedOnTokenAndItIsNull() throws Exception {
         final ContainerResponse response = makeRequest(HttpMethod.POST, SERVICE_PATH + "/create", null);
 

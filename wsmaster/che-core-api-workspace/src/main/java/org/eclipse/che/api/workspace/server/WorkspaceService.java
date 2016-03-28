@@ -72,6 +72,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
@@ -168,6 +169,7 @@ public class WorkspaceService extends Service {
                                                                                                   ServerException,
                                                                                                   ForbiddenException,
                                                                                                   BadRequestException {
+        validateKey(key);
         final UsersWorkspaceImpl workspace = workspaceManager.getWorkspace(key);
         ensureUserIsWorkspaceOwner(workspace);
         return injectLinks(asDto(workspace));
@@ -1043,6 +1045,27 @@ public class WorkspaceService extends Service {
     private void requiredNotNull(Object object, String subject) throws BadRequestException {
         if (object == null) {
             throw new BadRequestException(subject + " required");
+        }
+    }
+
+    /*
+    * Validate composite key.
+    *
+    */
+    private void validateKey(String key) throws BadRequestException {
+        String[] parts = key.split(":", -1); // -1 is to prevent skipping trailing part
+        switch (parts.length) {
+            case 1: {
+                return;
+            }
+            case 2: {
+                if (parts[1].isEmpty()) {
+                    throw new BadRequestException("Wrong composite key format - workspace name required to be set.");
+                }
+            }
+            default: {
+                throw new BadRequestException(format("Wrong composite key %s. Format should be 'username:workspace_name'. ", key));
+            }
         }
     }
 }

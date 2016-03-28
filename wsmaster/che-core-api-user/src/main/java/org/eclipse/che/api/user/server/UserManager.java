@@ -10,7 +10,6 @@
  *******************************************************************************/
 package org.eclipse.che.api.user.server;
 
-import org.eclipse.che.api.core.BadRequestException;
 import org.eclipse.che.api.core.ConflictException;
 import org.eclipse.che.api.core.NotFoundException;
 import org.eclipse.che.api.core.ServerException;
@@ -65,15 +64,12 @@ public class UserManager {
      *         - POJO representation of user entity
      * @throws ConflictException
      *         when given user cannot be created
-     * @throws BadRequestException
-     *         when password is not valid
      * @throws ServerException
      *         when any other error occurs
      */
-    public void create(User user, boolean isTemporary) throws ConflictException, ServerException, BadRequestException {
+    public void create(User user, boolean isTemporary) throws ConflictException, ServerException {
         user.withId(generate("user", ID_LENGTH))
             .withPassword(firstNonNull(user.getPassword(), generate("", PASSWORD_LENGTH)));
-        checkPassword(user.getPassword());
         userDao.create(user);
 
         profileDao.create(new Profile(user.getId()));
@@ -118,8 +114,7 @@ public class UserManager {
      *         when any other error occurs
      *
      */
-    public void update(User user) throws NotFoundException, ServerException, ConflictException, BadRequestException {
-        checkPassword(user.getPassword());
+    public void update(User user) throws NotFoundException, ServerException, ConflictException {
         userDao.update(user);
     }
 
@@ -168,42 +163,5 @@ public class UserManager {
      */
     public void remove(String id) throws NotFoundException, ServerException, ConflictException {
         userDao.remove(id);
-    }
-
-
-    /**
-     * Checks user password conforms some rules:
-     * <ul>
-     * <li> Not null
-     * <li> Must be at least 8 character length
-     * <li> Must contain at least one letter and one digit
-     * </ul>
-     *
-     * @param password
-     *         user's password
-     * @throws BadRequestException
-     *         when password violates any rule
-     */
-    private void checkPassword(String password) throws BadRequestException {
-        if (password == null) {
-            throw new BadRequestException("Password required");
-        }
-        if (password.length() < 8) {
-            throw new BadRequestException("Password should contain at least 8 characters");
-        }
-        int numOfLetters = 0;
-        int numOfDigits = 0;
-        for (char passwordChar : password.toCharArray()) {
-            if (Character.isDigit(passwordChar)) {
-                numOfDigits++;
-                continue;
-            }
-            if (Character.isLetter(passwordChar)) {
-                numOfLetters++;
-            }
-        }
-        if (numOfDigits == 0 || numOfLetters == 0) {
-            throw new BadRequestException("Password should contain letters and digits");
-        }
     }
 }
