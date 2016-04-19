@@ -25,6 +25,7 @@ import org.eclipse.che.ide.api.selection.Selection;
 import org.eclipse.che.ide.api.selection.SelectionAgent;
 import org.eclipse.che.ide.ext.git.client.GitLocalizationConstant;
 import org.eclipse.che.ide.ext.git.client.compare.ComparePresenter;
+import org.eclipse.che.ide.ext.git.client.compare.FileStatus;
 import org.eclipse.che.ide.rest.AsyncRequestCallback;
 import org.eclipse.che.ide.rest.DtoUnmarshallerFactory;
 import org.eclipse.che.ide.rest.StringUnmarshaller;
@@ -37,6 +38,7 @@ import java.util.Collections;
 
 import static org.eclipse.che.api.git.shared.DiffRequest.DiffType.NAME_STATUS;
 import static org.eclipse.che.ide.api.notification.StatusNotification.Status.FAIL;
+import static org.eclipse.che.ide.ext.git.client.compare.FileStatus.defineStatus;
 import static org.eclipse.che.ide.util.ExceptionUtils.getErrorCode;
 
 /**
@@ -55,7 +57,6 @@ public class RevisionListPresenter implements RevisionListView.ActionDelegate {
     private final GitLocalizationConstant locale;
     private final AppContext              appContext;
     private final NotificationManager     notificationManager;
-    private final String                  workspaceId;
 
     private ProjectConfigDto project;
     private Revision         selectedRevision;
@@ -80,8 +81,6 @@ public class RevisionListPresenter implements RevisionListView.ActionDelegate {
         this.notificationManager = notificationManager;
         this.dtoUnmarshallerFactory = dtoUnmarshallerFactory;
         this.selectionAgent = selectionAgent;
-        this.workspaceId = appContext.getWorkspaceId();
-
         this.view.setDelegate(this);
     }
 
@@ -140,7 +139,7 @@ public class RevisionListPresenter implements RevisionListView.ActionDelegate {
 
     /** Get list of revisions. */
     private void getRevisions() {
-        gitService.log(workspaceId, project, Collections.singletonList(selectedFile), false,
+        gitService.log(appContext.getDevMachine(), project, Collections.singletonList(selectedFile), false,
                        new AsyncRequestCallback<LogResponse>(dtoUnmarshallerFactory.newUnmarshaller(LogResponse.class)) {
 
                            @Override
@@ -173,7 +172,7 @@ public class RevisionListPresenter implements RevisionListView.ActionDelegate {
     }
 
     private void compare() {
-        gitService.diff(workspaceId, project, Collections.singletonList(selectedFile), NAME_STATUS, false, 0, selectedRevision.getId(),
+        gitService.diff(appContext.getDevMachine(), project, Collections.singletonList(selectedFile), NAME_STATUS, false, 0, selectedRevision.getId(),
                         false, new AsyncRequestCallback<String>(new StringUnmarshaller()) {
                             @Override
                             protected void onSuccess(String result) {
@@ -186,7 +185,9 @@ public class RevisionListPresenter implements RevisionListView.ActionDelegate {
                                                                           }
                                                                       }).show();
                                 } else {
-                                    comparePresenter.show(result.substring(2), result.substring(0, 1), selectedRevision.getId());
+                                    comparePresenter.show(result.substring(2),
+                                                          defineStatus(result.substring(0, 1)),
+                                                          selectedRevision.getId());
                                 }
                             }
 

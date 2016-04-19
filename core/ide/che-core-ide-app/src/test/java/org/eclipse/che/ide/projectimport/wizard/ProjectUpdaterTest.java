@@ -12,13 +12,14 @@ package org.eclipse.che.ide.projectimport.wizard;
 
 import com.google.web.bindery.event.shared.EventBus;
 
+import org.eclipse.che.api.machine.gwt.client.DevMachine;
 import org.eclipse.che.api.project.gwt.client.ProjectServiceClient;
 import org.eclipse.che.api.promises.client.Operation;
 import org.eclipse.che.api.promises.client.Promise;
 import org.eclipse.che.api.promises.client.PromiseError;
 import org.eclipse.che.api.workspace.shared.dto.ProjectConfigDto;
-import org.eclipse.che.api.workspace.shared.dto.UsersWorkspaceDto;
 import org.eclipse.che.api.workspace.shared.dto.WorkspaceConfigDto;
+import org.eclipse.che.api.workspace.shared.dto.WorkspaceDto;
 import org.eclipse.che.ide.api.app.AppContext;
 import org.eclipse.che.ide.api.event.project.CreateProjectEvent;
 import org.eclipse.che.ide.api.event.project.ProjectUpdatedEvent;
@@ -42,7 +43,6 @@ import java.util.List;
 import static com.google.common.collect.Lists.newArrayList;
 import static java.util.Collections.singletonList;
 import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.RETURNS_DEFAULTS;
@@ -70,16 +70,18 @@ public class ProjectUpdaterTest {
     private EventBus                      eventBus;
     @Mock
     private AppContext                    appContext;
+    @Mock
+    private DevMachine                    devMachine;
 
     //additional mocks
     @Mock
-    private ProjectConfigDto                 projectConfig;
+    private ProjectConfigDto        projectConfig;
     @Mock
-    private Wizard.CompleteCallback          completeCallback;
+    private Wizard.CompleteCallback completeCallback;
     @Mock
-    private UsersWorkspaceDto                usersWorkspaceDtoMock;
+    private WorkspaceDto            usersWorkspaceDtoMock;
     @Mock
-    private WorkspaceConfigDto               workspaceConfigDtoMock;
+    private WorkspaceConfigDto      workspaceConfigDtoMock;
 
     private Promise<ProjectConfigDto> getUpdatedProjectMock;
 
@@ -104,14 +106,16 @@ public class ProjectUpdaterTest {
     public void setUp() {
         when(appContext.getWorkspaceId()).thenReturn(WORKSPACE_ID);
         when(appContext.getWorkspace()).thenReturn(usersWorkspaceDtoMock);
+        when(appContext.getDevMachine()).thenReturn(devMachine);
+        when(devMachine.getWsAgentBaseUrl()).thenReturn("/ext");
         when(usersWorkspaceDtoMock.getConfig()).thenReturn(workspaceConfigDtoMock);
         when(projectConfig.getName()).thenReturn(PROJECT_NAME);
 
         getUpdatedProjectMock = createPromiseMock();
         getProjectsMock = createPromiseMock();
 
-        when(projectServiceClient.updateProject(anyString(), anyString(), any(ProjectConfigDto.class))).thenReturn(getUpdatedProjectMock);
-        when(projectServiceClient.getProjects(anyString())).thenReturn(getProjectsMock);
+        when(projectServiceClient.updateProject(eq(devMachine), anyString(), any(ProjectConfigDto.class))).thenReturn(getUpdatedProjectMock);
+        when(projectServiceClient.getProjects(eq(devMachine))).thenReturn(getProjectsMock);
 
         updater = new ProjectUpdater(projectServiceClient,
                                      projectNotificationSubscriber,
@@ -140,14 +144,14 @@ public class ProjectUpdaterTest {
 
         verify(projectConfig).getName();
 
-        verify(projectServiceClient).updateProject(eq(WORKSPACE_ID),
+        verify(projectServiceClient).updateProject(eq(devMachine),
                                                    eq('/' + PROJECT_NAME),
                                                    eq(projectConfig));
 
         verify(getProjectsMock).then(getProjectsCaptor.capture());
         getProjectsCaptor.getValue().apply(singletonList(projectConfig));
 
-        verify(projectServiceClient).getProjects(eq(WORKSPACE_ID));
+        verify(projectServiceClient).getProjects(eq(devMachine));
         verify(appContext).getWorkspace();
         verify(usersWorkspaceDtoMock).getConfig();
         verify(workspaceConfigDtoMock).withProjects(eq(newArrayList(projectConfig)));
@@ -166,7 +170,7 @@ public class ProjectUpdaterTest {
 
         verify(projectConfig).getName();
 
-        verify(projectServiceClient).updateProject(eq(WORKSPACE_ID),
+        verify(projectServiceClient).updateProject(eq(devMachine),
                                                    eq('/' + PROJECT_NAME),
                                                    eq(projectConfig));
 

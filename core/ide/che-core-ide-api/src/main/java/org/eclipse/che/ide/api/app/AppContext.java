@@ -11,7 +11,8 @@
 package org.eclipse.che.ide.api.app;
 
 import org.eclipse.che.api.factory.shared.dto.Factory;
-import org.eclipse.che.api.workspace.shared.dto.UsersWorkspaceDto;
+import org.eclipse.che.api.machine.gwt.client.DevMachine;
+import org.eclipse.che.api.workspace.shared.dto.WorkspaceDto;
 
 import java.util.List;
 
@@ -26,9 +27,9 @@ public interface AppContext {
     /** Returns list of start-up actions with parameters that comes form URL during IDE initialization. */
     List<StartUpAction> getStartAppActions();
 
-    UsersWorkspaceDto getWorkspace();
+    WorkspaceDto getWorkspace();
 
-    void setWorkspace(UsersWorkspaceDto workspace);
+    void setWorkspace(WorkspaceDto workspace);
 
     /** Returns id of current workspace of throws IllegalArgumentException if workspace is null. */
     String getWorkspaceId();
@@ -92,12 +93,13 @@ public interface AppContext {
 
     void setFactory(Factory factory);
 
-    /** Returns ID of the developer machine (where workspace is bound). */
-    String getDevMachineId();
+    /** Returns instance  of the developer machine (where workspace is bound). */
+    DevMachine getDevMachine();
 
-    void setDevMachineId(String id);
+    void setDevMachine(DevMachine devMachine);
 
     String getProjectsRoot();
 
     void setProjectsRoot(String projectsRoot);
+
 }

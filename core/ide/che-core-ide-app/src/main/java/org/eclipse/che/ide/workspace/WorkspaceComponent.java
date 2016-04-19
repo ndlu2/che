@@ -29,7 +29,7 @@ import org.eclipse.che.api.workspace.gwt.client.WorkspaceServiceClient;
 import org.eclipse.che.api.workspace.gwt.client.event.WorkspaceStartedEvent;
 import org.eclipse.che.api.workspace.gwt.client.event.WorkspaceStoppedEvent;
 import org.eclipse.che.api.workspace.shared.dto.EnvironmentDto;
-import org.eclipse.che.api.workspace.shared.dto.UsersWorkspaceDto;
+import org.eclipse.che.api.workspace.shared.dto.WorkspaceDto;
 import org.eclipse.che.api.workspace.shared.dto.event.WorkspaceStatusEvent;
 import org.eclipse.che.ide.CoreLocalizationConstant;
 import org.eclipse.che.ide.actions.WorkspaceSnapshotCreator;
@@ -161,7 +161,7 @@ public abstract class WorkspaceComponent implements Component, WsAgentStateHandl
      * @param workspace
      *         workspace which will be current
      */
-    public void setCurrentWorkspace(UsersWorkspaceDto workspace) {
+    public void setCurrentWorkspace(WorkspaceDto workspace) {
         appContext.setWorkspace(workspace);
 
         if (needToReloadComponents) {
@@ -169,7 +169,7 @@ public abstract class WorkspaceComponent implements Component, WsAgentStateHandl
             needToReloadComponents = false;
         }
 
-        browserQueryFieldRenderer.setWorkspaceName(workspace.getConfig().getName());
+        browserQueryFieldRenderer.setQueryField(workspace.getConfig().getName(), "");
     }
 
     /**
@@ -177,8 +177,11 @@ public abstract class WorkspaceComponent implements Component, WsAgentStateHandl
      *
      * @param workspace
      *         workspace which will be started
+     * @param callback
+     *         callback to be executed
      */
-    public void startWorkspaceById(final UsersWorkspaceDto workspace) {
+    public void startWorkspaceById(final WorkspaceDto workspace, final Callback<Component, Exception> callback) {
+        this.callback = callback;
         loader.show(initialLoadingInfo);
         initialLoadingInfo.setOperationStatus(WORKSPACE_BOOTING.getValue(), IN_PROGRESS);
 
@@ -220,7 +223,7 @@ public abstract class WorkspaceComponent implements Component, WsAgentStateHandl
      * <p> When "Ok" button is pressed - {@link WorkspaceServiceClient#recoverWorkspace(String, String, String) recovers workspace}
      * <br>When "Cancel" button is pressed - {@link WorkspaceServiceClient#startById(String, String) starts workspace}
      */
-    private void showRecoverWorkspaceConfirmDialog(final UsersWorkspaceDto workspace) {
+    private void showRecoverWorkspaceConfirmDialog(final WorkspaceDto workspace) {
         dialogFactory.createConfirmDialog("Workspace recovering",
                                           "Do you want to recover the workspace from snapshot?",
                                           new ConfirmCallback() {
@@ -246,10 +249,10 @@ public abstract class WorkspaceComponent implements Component, WsAgentStateHandl
     /**
      * Handles workspace start or recovering.
      */
-    private void handleWsStart(final Promise<UsersWorkspaceDto> promise) {
-        promise.then(new Operation<UsersWorkspaceDto>() {
+    private void handleWsStart(final Promise<WorkspaceDto> promise) {
+        promise.then(new Operation<WorkspaceDto>() {
             @Override
-            public void apply(UsersWorkspaceDto workspace) throws OperationException {
+            public void apply(WorkspaceDto workspace) throws OperationException {
                 initialLoadingInfo.setOperationStatus(WORKSPACE_BOOTING.getValue(), SUCCESS);
                 setCurrentWorkspace(workspace);
                 EnvironmentDto currentEnvironment = null;
@@ -278,7 +281,7 @@ public abstract class WorkspaceComponent implements Component, WsAgentStateHandl
         });
     }
 
-    private void subscribeToWorkspaceStatusWebSocket(final UsersWorkspaceDto workspace) {
+    private void subscribeToWorkspaceStatusWebSocket(final WorkspaceDto workspace) {
         Unmarshallable<WorkspaceStatusEvent> unmarshaller = dtoUnmarshallerFactory.newWSUnmarshaller(WorkspaceStatusEvent.class);
 
         try {
@@ -304,12 +307,6 @@ public abstract class WorkspaceComponent implements Component, WsAgentStateHandl
                             break;
 
                         case STOPPED:
-                            workspaceServiceClient.getWorkspaces(SKIP_COUNT, MAX_COUNT).then(new Operation<List<UsersWorkspaceDto>>() {
-                                @Override
-                                public void apply(List<UsersWorkspaceDto> workspaces) throws OperationException {
-                                    startWorkspacePresenter.show(workspaces, callback);
-                                }
-                            });
                             unSubscribeWorkspace(statusEvent.getWorkspaceId(), this);
                             notificationManager.notify(locale.extServerStopped(), StatusNotification.Status.SUCCESS, true);
                             eventBus.fireEvent(new WorkspaceStoppedEvent(workspace));
@@ -337,9 +334,9 @@ public abstract class WorkspaceComponent implements Component, WsAgentStateHandl
     }
 
     private void showErrorDialog(final String wsName, final String errorMessage) {
-        workspaceServiceClient.getWorkspaces(SKIP_COUNT, MAX_COUNT).then(new Operation<List<UsersWorkspaceDto>>() {
+        workspaceServiceClient.getWorkspaces(SKIP_COUNT, MAX_COUNT).then(new Operation<List<WorkspaceDto>>() {
             @Override
-            public void apply(final List<UsersWorkspaceDto> workspaces) throws OperationException {
+            public void apply(final List<WorkspaceDto> workspaces) throws OperationException {
                 dialogFactory.createMessageDialog(locale.startWsErrorTitle(),
                                                   locale.startWsErrorContent(wsName, errorMessage),
                                                   new ConfirmCallback() {
@@ -365,11 +362,11 @@ public abstract class WorkspaceComponent implements Component, WsAgentStateHandl
     /**
      * Starts specified workspace if it's {@link WorkspaceStatus} different of {@code RUNNING}
      */
-    protected Operation<UsersWorkspaceDto> startWorkspace() {
-        return new Operation<UsersWorkspaceDto>() {
+    protected Operation<WorkspaceDto> startWorkspace() {
+        return new Operation<WorkspaceDto>() {
             @Override
-            public void apply(UsersWorkspaceDto workspaceToStart) throws OperationException {
-                startWorkspaceById(workspaceToStart);
+            public void apply(WorkspaceDto workspaceToStart) throws OperationException {
+                startWorkspaceById(workspaceToStart, callback);
             }
         };
     }

@@ -22,7 +22,6 @@ import org.eclipse.che.api.workspace.shared.dto.ProjectConfigDto;
 import org.eclipse.che.ide.api.app.AppContext;
 import org.eclipse.che.ide.api.event.ConfigureProjectEvent;
 import org.eclipse.che.ide.api.event.project.CreateProjectEvent;
-import org.eclipse.che.ide.api.event.project.ProjectUpdatedEvent;
 import org.eclipse.che.ide.api.project.wizard.ProjectNotificationSubscriber;
 import org.eclipse.che.ide.api.wizard.Wizard.CompleteCallback;
 
@@ -41,7 +40,6 @@ public class ProjectUpdater {
     private final ProjectNotificationSubscriber projectNotificationSubscriber;
     private final EventBus                      eventBus;
     private final AppContext                    appContext;
-    private final String                        workspaceId;
 
     @Inject
     public ProjectUpdater(ProjectServiceClient projectService,
@@ -52,7 +50,6 @@ public class ProjectUpdater {
         this.projectNotificationSubscriber = projectNotificationSubscriber;
         this.eventBus = eventBus;
         this.appContext = appContext;
-        this.workspaceId = appContext.getWorkspaceId();
     }
 
     /**
@@ -71,7 +68,7 @@ public class ProjectUpdater {
                               final boolean isConfigurationRequired) {
         final String projectPath = projectConfig.getPath();
 
-        projectService.updateProject(workspaceId,
+        projectService.updateProject(appContext.getDevMachine(),
                                      projectPath == null ? '/' + projectConfig.getName() : projectPath,
                                      projectConfig)
                       .then(new Operation<ProjectConfigDto>() {
@@ -81,14 +78,14 @@ public class ProjectUpdater {
                               //dirty hack. here we have to load from server new list of projects, because after project configuring
                               //they may appear, so we need to have actual projects configuration state, need to find better way to
                               //process it
-                              projectService.getProjects(workspaceId).then(new Operation<List<ProjectConfigDto>>() {
+                              projectService.getProjects(appContext.getDevMachine()).then(new Operation<List<ProjectConfigDto>>() {
                                   @Override
                                   public void apply(List<ProjectConfigDto> projects) throws OperationException {
 
                                       appContext.getWorkspace().getConfig().withProjects(projects);
 
                                       if (updated.getProblems().isEmpty() && !isConfigurationRequired) {
-                                          eventBus.fireEvent(new ProjectUpdatedEvent(projectPath, updated));
+                                          eventBus.fireEvent(new CreateProjectEvent(updated));
                                           projectNotificationSubscriber.onSuccess();
                                           callback.onCompleted();
                                           return;

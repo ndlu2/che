@@ -176,6 +176,16 @@ public class ProjectService extends Service {
                                                                                                                        ForbiddenException,
                                                                                                                        ServerException,
                                                                                                                        NotFoundException {
+        String pathToProject = projectConfig.getPath();
+        String pathToParent = pathToProject.substring(0, pathToProject.lastIndexOf("/"));
+
+        if (!pathToParent.equals("/")) {
+            VirtualFileEntry parentFileEntry = projectManager.getProjectsRoot().getChild(pathToParent);
+            if (parentFileEntry == null) {
+                throw new NotFoundException("The parent folder with path " + pathToParent + " does not exist.");
+            }
+        }
+
         final RegisteredProject project = projectManager.createProject(projectConfig, null);
         final ProjectConfigDto configDto = asDto(project);
 
@@ -313,7 +323,7 @@ public class ProjectService extends Service {
                                                                      ServerException,
                                                                      NotFoundException,
                                                                      BadRequestException {
-        projectManager.importProject(path, sourceStorage);
+        projectManager.importProject(path, sourceStorage, force);
     }
 
     @POST
@@ -343,7 +353,8 @@ public class ProjectService extends Service {
         final FileEntry newFile = parent.createFile(fileName, content);
 
         eventService.publish(new ProjectItemModifiedEvent(ProjectItemModifiedEvent.EventType.CREATED,
-                                                          workspace, projectPath(newFile.getPath().toString()),
+                                                          workspace,
+                                                          newFile.getProject(),
                                                           newFile.getPath().toString(),
                                                           false));
 
@@ -379,7 +390,7 @@ public class ProjectService extends Service {
 
         eventService.publish(new ProjectItemModifiedEvent(ProjectItemModifiedEvent.EventType.CREATED,
                                                           workspace,
-                                                          projectPath(newFolder.getPath().toString()),
+                                                          newFolder.getProject(),
                                                           newFolder.getPath().toString(),
                                                           true));
 
@@ -486,7 +497,7 @@ public class ProjectService extends Service {
 
         eventService.publish(new ProjectItemModifiedEvent(ProjectItemModifiedEvent.EventType.UPDATED,
                                                           workspace,
-                                                          projectPath(file.getPath().toString()),
+                                                          file.getProject(),
                                                           file.getPath().toString(),
                                                           false));
 
@@ -581,7 +592,7 @@ public class ProjectService extends Service {
 
         eventService.publish(new ProjectItemModifiedEvent(ProjectItemModifiedEvent.EventType.MOVED,
                                                           workspace,
-                                                          projectPath(entry.getPath().toString()),
+                                                          entry.getProject(),
                                                           entry.getPath().toString(),
                                                           entry.isFolder(),
                                                           path));
@@ -908,15 +919,6 @@ public class ProjectService extends Service {
                  projectType,
                  EnvironmentContext.getCurrent().getWorkspaceId(),
                  EnvironmentContext.getCurrent().getUser().getId());
-    }
-
-    private String projectPath(String path) {
-        int end = path.indexOf("/");
-        if (end == -1) {
-            return path;
-        }
-
-        return path.substring(0, end);
     }
 
     private VirtualFileEntry getVirtualFile(String path, boolean force) throws ServerException,

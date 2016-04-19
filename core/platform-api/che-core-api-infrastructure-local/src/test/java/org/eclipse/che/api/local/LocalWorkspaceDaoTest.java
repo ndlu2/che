@@ -23,7 +23,7 @@ import org.eclipse.che.api.machine.server.recipe.RecipeImpl;
 import org.eclipse.che.api.workspace.server.model.impl.EnvironmentImpl;
 import org.eclipse.che.api.workspace.server.model.impl.ProjectConfigImpl;
 import org.eclipse.che.api.workspace.server.model.impl.SourceStorageImpl;
-import org.eclipse.che.api.workspace.server.model.impl.UsersWorkspaceImpl;
+import org.eclipse.che.api.workspace.server.model.impl.WorkspaceImpl;
 import org.eclipse.che.api.workspace.server.model.impl.WorkspaceConfigImpl;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -69,7 +69,7 @@ public class LocalWorkspaceDaoTest {
 
     @Test
     public void testWorkspaceSerialization() throws Exception {
-        final UsersWorkspaceImpl workspace = createWorkspace();
+        final WorkspaceImpl workspace = createWorkspace();
 
         workspaceDao.create(workspace);
         workspaceDao.saveWorkspaces();
@@ -79,16 +79,16 @@ public class LocalWorkspaceDaoTest {
 
     @Test
     public void testWorkspaceDeserialization() throws Exception {
-        final UsersWorkspaceImpl workspace = createWorkspace();
+        final WorkspaceImpl workspace = createWorkspace();
         write(workspacesPath, GSON.toJson(singletonMap(workspace.getId(), workspace)).getBytes());
 
         workspaceDao.loadWorkspaces();
 
-        final UsersWorkspaceImpl result = workspaceDao.get(workspace.getId());
+        final WorkspaceImpl result = workspaceDao.get(workspace.getId());
         assertEquals(result, workspace);
     }
 
-    private static UsersWorkspaceImpl createWorkspace() {
+    private static WorkspaceImpl createWorkspace() {
         // environments
         final RecipeImpl recipe = new RecipeImpl();
         recipe.setType("dockerfile");
@@ -108,7 +108,8 @@ public class LocalWorkspaceDaoTest {
                                                                                                      "9090/udp",
                                                                                                      "someprotocol",
                                                                                                      "/some/path")),
-                                                                    Collections.singletonMap("key1", "value1"));
+                                                                    Collections.singletonMap("key1", "value1"),
+                                                                    null);
         final MachineConfigImpl machineCfg2 = new MachineConfigImpl(false,
                                                                     "non-dev-machine",
                                                                     "machine-type-2",
@@ -122,7 +123,8 @@ public class LocalWorkspaceDaoTest {
                                                                                                      "9090/udp",
                                                                                                      "someprotocol",
                                                                                                      "/some/path")),
-                                                                    Collections.singletonMap("key1", "value1"));
+                                                                    Collections.singletonMap("key1", "value1"),
+                                                                    null);
 
         final EnvironmentImpl env1 = new EnvironmentImpl("my-environment", recipe, asList(machineCfg1, machineCfg2));
         final EnvironmentImpl env2 = new EnvironmentImpl("my-environment-2", recipe, singletonList(machineCfg1));
@@ -163,16 +165,15 @@ public class LocalWorkspaceDaoTest {
         attributes.put("test.attribute2", "test-value2");
         attributes.put("test.attribute3", "test-value3");
 
-        return UsersWorkspaceImpl.builder()
-                                 .setId(generate("workspace", 16))
-                                 .setConfig(new WorkspaceConfigImpl("test-workspace-name",
-                                                                    "This is test workspace",
-                                                                    env1.getName(),
-                                                                    commands,
-                                                                    projects,
-                                                                    environments,
-                                                                    attributes))
-                                 .setOwner("user123")
-                                 .build();
+        return WorkspaceImpl.builder()
+                            .setId(generate("workspace", 16))
+                            .setConfig(new WorkspaceConfigImpl("test-workspace-name",
+                                                               "This is test workspace",
+                                                               env1.getName(),
+                                                               commands,
+                                                               projects,
+                                                               environments))
+                            .setNamespace("user123")
+                            .build();
     }
 }

@@ -14,6 +14,7 @@ import com.google.inject.Inject;
 import com.google.inject.Provider;
 import com.google.inject.Singleton;
 
+import org.eclipse.che.api.project.shared.dto.AttributeDto;
 import org.eclipse.che.api.project.shared.dto.ItemReference;
 import org.eclipse.che.api.project.shared.dto.ProjectTemplateDescriptor;
 import org.eclipse.che.api.project.shared.dto.ProjectTypeDto;
@@ -32,12 +33,12 @@ import org.eclipse.che.ide.projecttype.wizard.categoriespage.CategoriesPagePrese
 import org.eclipse.che.ide.ui.dialogs.DialogFactory;
 
 import javax.validation.constraints.NotNull;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import static org.eclipse.che.ide.api.project.type.wizard.ProjectWizardMode.CREATE;
-import static org.eclipse.che.ide.api.project.type.wizard.ProjectWizardMode.CREATE_MODULE;
 import static org.eclipse.che.ide.api.project.type.wizard.ProjectWizardMode.IMPORT;
 import static org.eclipse.che.ide.api.project.type.wizard.ProjectWizardMode.UPDATE;
 
@@ -158,7 +159,7 @@ public class ProjectWizardPresenter implements Wizard.UpdateDelegate,
     /** Open the project wizard for creating module from the given {@code folder}. */
     public void show(@NotNull ItemReference folder) {
         resetState();
-        wizardMode = CREATE_MODULE;
+        wizardMode = UPDATE;
         projectPath = folder.getPath();
         final ProjectConfigDto dataObject = dtoFactory.createDto(ProjectConfigDto.class)
                                                       .withName(folder.getName());
@@ -191,19 +192,25 @@ public class ProjectWizardPresenter implements Wizard.UpdateDelegate,
         wizard = getWizardForProjectType(projectType, prevData);
         wizard.navigateToFirst();
         final ProjectConfigDto newProject = wizard.getDataObject();
-
-        // some values should be shared between wizards for different project types
-        newProject.setPath(prevData.getPath());
+        newProject.setType(projectType.getId());
         newProject.setName(prevData.getName());
         newProject.setDescription(prevData.getDescription());
-        newProject.setMixins(prevData.getMixins());
-        if (wizardMode == UPDATE) {
+        if (wizardMode == CREATE) {
+            newProject.setMixins(Collections.<String>emptyList());
+            List<AttributeDto> attributes = projectType.getAttributes();
+            Map<String, List<String>> prevDataAttributes = prevData.getAttributes();
+            Map<String, List<String>> newAttributes = new HashMap<>();
+            for (AttributeDto attribute : attributes) {
+                if(prevDataAttributes.containsKey(attribute.getId())) {
+                    newAttributes.put(attribute.getId(), prevDataAttributes.get(attribute.getId()));
+                }
+            }
+            newProject.setAttributes(newAttributes);
+        } else {
+            // some values should be shared between wizards for different project types
+            newProject.setMixins(prevData.getMixins());
             newProject.setAttributes(prevData.getAttributes());
         }
-
-        // set dataObject's values from projectType
-        newProject.setType(projectType.getId());
-//        newProject.setRecipe(projectType.getDefaultRecipe());
     }
 
     @Override

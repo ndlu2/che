@@ -14,14 +14,12 @@ import com.google.inject.Inject;
 import com.google.inject.assistedinject.Assisted;
 import com.google.web.bindery.event.shared.EventBus;
 
-import org.eclipse.che.api.core.rest.shared.dto.ServiceError;
 import org.eclipse.che.api.project.gwt.client.ProjectServiceClient;
 import org.eclipse.che.api.project.shared.Constants;
 import org.eclipse.che.api.workspace.shared.dto.ProjectConfigDto;
 import org.eclipse.che.ide.CoreLocalizationConstant;
 import org.eclipse.che.ide.api.app.AppContext;
 import org.eclipse.che.ide.api.event.project.CreateProjectEvent;
-import org.eclipse.che.ide.api.event.project.OpenProjectEvent;
 import org.eclipse.che.ide.api.project.node.HasStorablePath;
 import org.eclipse.che.ide.api.project.node.Node;
 import org.eclipse.che.ide.api.project.type.wizard.ProjectWizardMode;
@@ -41,9 +39,7 @@ import org.eclipse.che.ide.ui.dialogs.DialogFactory;
 
 import javax.validation.constraints.NotNull;
 
-import static org.eclipse.che.ide.api.project.type.wizard.ProjectWizardMode.CREATE;
 import static org.eclipse.che.ide.api.project.type.wizard.ProjectWizardMode.CREATE_MODULE;
-import static org.eclipse.che.ide.api.project.type.wizard.ProjectWizardMode.IMPORT;
 import static org.eclipse.che.ide.api.project.type.wizard.ProjectWizardMode.UPDATE;
 import static org.eclipse.che.ide.api.project.type.wizard.ProjectWizardRegistrar.PROJECT_NAME_KEY;
 import static org.eclipse.che.ide.api.project.type.wizard.ProjectWizardRegistrar.PROJECT_PATH_KEY;
@@ -57,8 +53,9 @@ import static org.eclipse.che.ide.api.project.type.wizard.ProjectWizardRegistrar
  */
 public class ProjectWizard extends AbstractWizard<ProjectConfigDto> {
 
-    private final ProjectWizardMode        mode;
-    private final ProjectServiceClient     projectServiceClient;
+    private final ProjectWizardMode mode;
+    private final AppContext        appContext;
+    private final ProjectServiceClient projectServiceClient;
     private final DtoUnmarshallerFactory   dtoUnmarshallerFactory;
     private final DtoFactory               dtoFactory;
     private final DialogFactory            dialogFactory;
@@ -85,6 +82,7 @@ public class ProjectWizard extends AbstractWizard<ProjectConfigDto> {
                          CoreLocalizationConstant locale) {
         super(dataObject);
         this.mode = mode;
+        this.appContext = appContext;
         this.projectServiceClient = projectServiceClient;
         this.dtoUnmarshallerFactory = dtoUnmarshallerFactory;
         this.dtoFactory = dtoFactory;
@@ -100,27 +98,33 @@ public class ProjectWizard extends AbstractWizard<ProjectConfigDto> {
         context.put(PROJECT_NAME_KEY, dataObject.getName());
 
         if (mode == UPDATE || mode == CREATE_MODULE) {
-            context.put(PROJECT_PATH_KEY, projectPath);
+            context.put(PROJECT_PATH_KEY, projectPath == null ? dataObject.getPath() : projectPath);
         }
     }
 
     /** {@inheritDoc} */
     @Override
     public void complete(@NotNull final CompleteCallback callback) {
-        if (mode == CREATE) {
-            createProject(callback);
-        } else if (mode == CREATE_MODULE) {
-            createModule(callback);
-        } else if (mode == UPDATE) {
-            updater.updateProject(new UpdateCallback(callback), dataObject, false);
-        } else if (mode == IMPORT) {
-            importer.importProject(callback, dataObject);
+        switch (mode) {
+            case CREATE:
+                createProject(callback);
+                break;
+            case UPDATE:
+                updater.updateProject(new UpdateCallback(callback), dataObject, false);
+                break;
+            case IMPORT:
+                importer.importProject(callback, dataObject);
+                break;
+            case CREATE_MODULE:
+                createModule(callback);
+                break;
+            default:
         }
     }
 
     private void createProject(final CompleteCallback callback) {
         final Unmarshallable<ProjectConfigDto> unmarshaller = dtoUnmarshallerFactory.newUnmarshaller(ProjectConfigDto.class);
-        projectServiceClient.createProject(workspaceId, dataObject, new AsyncRequestCallback<ProjectConfigDto>(unmarshaller) {
+        projectServiceClient.createProject(appContext.getDevMachine(), dataObject, new AsyncRequestCallback<ProjectConfigDto>(unmarshaller) {
             @Override
             protected void onSuccess(ProjectConfigDto result) {
                 eventBus.fireEvent(new CreateProjectEvent(result));
@@ -130,8 +134,7 @@ public class ProjectWizard extends AbstractWizard<ProjectConfigDto> {
 
             @Override
             protected void onFailure(Throwable exception) {
-                final String message = dtoFactory.createDtoFromJson(exception.getMessage(), ServiceError.class).getMessage();
-                callback.onFailure(new Exception(message));
+                callback.onFailure(new Exception(exception.getLocalizedMessage()));
             }
         });
     }
@@ -140,7 +143,7 @@ public class ProjectWizard extends AbstractWizard<ProjectConfigDto> {
         dataObject.setPath(new Path(getPathToSelectedNodeParent()).append(dataObject.getName()).toString());
 
         final Unmarshallable<ProjectConfigDto> unmarshaller = dtoUnmarshallerFactory.newUnmarshaller(ProjectConfigDto.class);
-        projectServiceClient.updateProject(workspaceId,
+        projectServiceClient.updateProject(appContext.getDevMachine(),
                                            dataObject.getPath(),
                                            dataObject,
                                            new AsyncRequestCallback<ProjectConfigDto>(unmarshaller) {
@@ -214,19 +217,16 @@ public class ProjectWizard extends AbstractWizard<ProjectConfigDto> {
         dataObject.setType(Constants.BLANK_ID);
         final Unmarshallable<ProjectConfigDto> unmarshaller = dtoUnmarshallerFactory.newUnmarshaller(ProjectConfigDto.class);
         projectServiceClient
-                .updateProject(workspaceId, dataObject.getName(), dataObject, new AsyncRequestCallback<ProjectConfigDto>(unmarshaller) {
+                .updateProject(appContext.getDevMachine(), dataObject.getPath(), dataObject, new AsyncRequestCallback<ProjectConfigDto>(unmarshaller) {
                     @Override
                     protected void onSuccess(ProjectConfigDto result) {
-                        // just re-open project if it's already opened
-                        ProjectWizard.this.eventBus.fireEvent(new OpenProjectEvent(result));
+                        eventBus.fireEvent(new CreateProjectEvent(result));
                         callback.onCompleted();
                     }
 
                     @Override
                     protected void onFailure(Throwable exception) {
-                        final String message =
-                                ProjectWizard.this.dtoFactory.createDtoFromJson(exception.getMessage(), ServiceError.class).getMessage();
-                        callback.onFailure(new Exception(message));
+                        callback.onFailure(new Exception(exception.getLocalizedMessage()));
                     }
                 });
     }
