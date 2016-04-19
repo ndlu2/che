@@ -31,7 +31,7 @@ import org.junit.runners.Parameterized.Parameters;
  */
 @RunWith(Parameterized.class)
 public class StringUtilsTest {
-    enum Type {SEC_TO_HUMAN_READABLE, COMMON_PREFIX_LENGTH};
+    enum Type {SEC_TO_HUMAN_READABLE, COMMON_PREFIX_LENGTH, ENDS_WITH};
     
     @Parameters
     public static Collection<Object[]> data(){
@@ -43,7 +43,12 @@ public class StringUtilsTest {
           {Type.SEC_TO_HUMAN_READABLE, "115d:17h:46m:39s", Arrays.asList(9999999)},
           
           {Type.COMMON_PREFIX_LENGTH, 0, Arrays.asList("no", "common")},
-          {Type.COMMON_PREFIX_LENGTH, 3, Arrays.asList("com", "common")}
+          {Type.COMMON_PREFIX_LENGTH, 3, Arrays.asList("com", "common")},
+          
+          {Type.ENDS_WITH, true, Arrays.asList(null, null)},
+          {Type.ENDS_WITH, false, Arrays.asList(null, "foo")},
+          {Type.ENDS_WITH, false, Arrays.asList("foo", "bar")},
+          {Type.ENDS_WITH, true, Arrays.asList("foobar", "bar")},
         });
     }
 
@@ -66,5 +71,11 @@ public class StringUtilsTest {
     public void testCommonPrefixLength(){
         Assume.assumeTrue(type == Type.COMMON_PREFIX_LENGTH);
         Assert.assertEquals(expected, StringUtils.findCommonPrefixLength((String)args.get(0), (String)args.get(1)));
+    }
+    
+    @Test
+    public void testEndsWith(){
+    	Assume.assumeTrue(type == Type.ENDS_WITH);
+    	Assert.assertEquals(expected, StringUtils.endsWithIgnoreCase((String)args.get(0), (String)args.get(1)));
     }
 }
