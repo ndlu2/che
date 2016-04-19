@@ -31,7 +31,7 @@ import org.junit.runners.Parameterized.Parameters;
  */
 @RunWith(Parameterized.class)
 public class StringUtilsTest {
-    enum Type {SEC_TO_HUMAN_READABLE, COMMON_PREFIX_LENGTH, ENDS_WITH};
+    enum Type {SEC_TO_HUMAN_READABLE, COMMON_PREFIX_LENGTH, ENDS_WITH, STARTS_WITH};
     
     @Parameters
     public static Collection<Object[]> data(){
@@ -49,6 +49,12 @@ public class StringUtilsTest {
           {Type.ENDS_WITH, false, Arrays.asList(null, "foo")},
           {Type.ENDS_WITH, false, Arrays.asList("foo", "bar")},
           {Type.ENDS_WITH, true, Arrays.asList("foobar", "bar")},
+          
+          {Type.STARTS_WITH, false, Arrays.asList("foo", "bar", true)},
+          {Type.STARTS_WITH, false, Arrays.asList("foo", "bar", false)},
+          {Type.STARTS_WITH, true, Arrays.asList("foo", "FoObar", true)},		
+          {Type.STARTS_WITH, false, Arrays.asList("foo", "FoObar", false)},
+          {Type.STARTS_WITH, true, Arrays.asList("foo", "FoO", true)},
         });
     }
 
@@ -77,5 +83,11 @@ public class StringUtilsTest {
     public void testEndsWith(){
     	Assume.assumeTrue(type == Type.ENDS_WITH);
     	Assert.assertEquals(expected, StringUtils.endsWithIgnoreCase((String)args.get(0), (String)args.get(1)));
+    }
+    
+    @Test
+    public void testStartsWith() {
+    	Assume.assumeTrue(type == Type.STARTS_WITH);
+    	Assert.assertEquals(expected, StringUtils.startsWith((String)args.get(0), (String)args.get(1), (Boolean)args.get(2)));
     }
 }
